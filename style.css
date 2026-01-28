@@ -44,7 +44,6 @@ select {
   font-size: 15px;
   background-color: #2a243f;
   color: #fff;
-  transition: all 0.3s ease;
 }
 
 input:focus,
@@ -52,42 +51,6 @@ select:focus {
   border-color: #d9a7ff;
   box-shadow: 0 0 8px rgba(217, 167, 255, 0.5);
   outline: none;
-}
-
-/* ================= SELECT CUSTOM ================= */
-select {
-  appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #d9a7ff 50%),
-    linear-gradient(135deg, #d9a7ff 50%, transparent 50%);
-  background-position:
-    calc(100% - 20px) 55%,
-    calc(100% - 15px) 55%;
-  background-size: 6px 6px;
-  background-repeat: no-repeat;
-  cursor: pointer;
-}
-
-/* ================= IMAGEM ================= */
-.image-label {
-  display: block;
-  background: #3e2a5f;
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 14px;
-  text-align: center;
-  cursor: pointer;
-  font-weight: 600;
-  color: #f5f5f5;
-  transition: background 0.3s ease;
-}
-
-.image-label:hover {
-  background: #5a3ea0;
-}
-
-.image-label input {
-  display: none;
 }
 
 /* ================= BOTÕES ================= */
@@ -101,18 +64,6 @@ button {
   font-weight: 700;
   cursor: pointer;
   width: 100%;
-  min-height: 50px;
-  transition: all 0.3s ease;
-}
-
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
-}
-
-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 3px 10px rgba(138, 43, 226, 0.4);
 }
 
 button.secondary {
@@ -127,87 +78,16 @@ button.secondary {
 #shoppingList {
   list-style: none;
   margin-top: 12px;
-  padding-left: 0;
 }
 
-/* ================= ITEM DO CARRINHO ================= */
+/* ================= ITEM ================= */
 .item-card {
   background: #3a2c5d;
   border-radius: 18px;
   padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-  font-size: 14px;
-  color: #f5f5f5;
-}
-
-.item-card button {
-  margin-top: 10px;
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
   font-size: 14px;
 }
-
-.item-card button:hover {
-  box-shadow: 0 5px 15px rgba(255, 65, 108, 0.5);
-}
-
-/* ================= PESO POR UNIDADE ================= */
-#weightPerUnitWrapper {
-  background: #2d2240;
-  border-radius: 16px;
-  padding: 14px;
-  margin-bottom: 14px;
-}
-
-#weightPerUnitWrapper label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #d9d9ff;
-}
-
-/* ================= HINT ================= */
-#unitHint {
-  display: block;
-  font-size: 13px;
-  margin-bottom: 10px;
-  color: #d9d9ff;
-}
-
-/* ================= TABLE ================= */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-  color: #f5f5f5;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-}
-
-th {
-  background: rgba(255,255,255,0.1);
-  font-weight: 600;
-  text-align: left;
-}
-
-/* ================= RESPONSIVO ================= */
-@media (max-width: 480px) {
-  h1 {
-    font-size: 1.6rem;
-  }
-
-  button {
-    font-size: 15px;
-    padding: 14px;
-  }
-
-  .item-card {
-    font-size: 13px;
-  }
 
 /* ================= ABAS ================= */
 .tabs {
@@ -225,14 +105,11 @@ th {
   background: linear-gradient(145deg, #2d2540, #1e1b2f);
   color: #d9a7ff;
   border: 1px solid rgba(138, 43, 226, 0.5);
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .tabs button.active {
   background: linear-gradient(135deg, #8e2de2, #4a00e0);
   color: #fff;
-  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
 }
 
 /* ================= CONTEÚDO DAS ABAS ================= */
@@ -244,11 +121,31 @@ th {
   display: block;
 }
 
+/* ================= CUPOM FISCAL ================= */
+.cupom {
+  background: #ffffff;
+  color: #000;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  padding: 16px;
+  border-radius: 6px;
+  margin-top: 10px;
+  white-space: pre-wrap;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+}
 
+/* ================= RESPONSIVO ================= */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.6rem;
+  }
 
+  button {
+    font-size: 15px;
+    padding: 14px;
+  }
 
-
-
-
-
+  .item-card {
+    font-size: 13px;
+  }
 }
