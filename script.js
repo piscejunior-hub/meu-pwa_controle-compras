@@ -23,18 +23,9 @@ function num(v) {
 
 /* ================= PRODUTOS POR PESO ================= */
 const produtosPorPeso = [
-  "arroz",
-  "feijão",
-  "feijao",
-  "açúcar",
-  "acucar",
-  "farinha",
-  "macarrão",
-  "macarrao",
-  "carne",
-  "frango",
-  "peixe",
-  "sal"
+  "arroz","feijão","feijao","açúcar","acucar",
+  "farinha","macarrão","macarrao",
+  "carne","frango","peixe","sal"
 ];
 
 /* ================= DICA DE PESO ================= */
@@ -73,7 +64,6 @@ function renderCatalog() {
   if (!select) return;
 
   select.innerHTML = `<option value="">Selecionar produto</option>`;
-
   Object.keys(catalog).forEach(nome => {
     select.innerHTML += `<option value="${nome}">${nome}</option>`;
   });
@@ -82,17 +72,14 @@ function renderCatalog() {
 document.getElementById("productSelect")?.addEventListener("change", e => {
   const nome = e.target.value;
   if (!catalog[nome]) return;
-
   document.getElementById("productName").value = nome;
   document.getElementById("price").value = catalog[nome].price.toFixed(2);
   mostrarDicaUnidade(nome);
 });
 
-document
-  .getElementById("productName")
-  ?.addEventListener("input", e =>
-    mostrarDicaUnidade(e.target.value)
-  );
+document.getElementById("productName")?.addEventListener("input", e =>
+  mostrarDicaUnidade(e.target.value)
+);
 
 /* ================= ADICIONAR ITEM ================= */
 function addItem() {
@@ -117,8 +104,7 @@ function addItem() {
   }
 
   const quantidadeKg = precisaPeso ? pacotes * pesoPacote : pacotes;
-  const precoUnitario =
-    tipoPreco === "total" ? preco / pacotes : preco;
+  const precoUnitario = tipoPreco === "total" ? preco / pacotes : preco;
 
   cart.push({
     nome,
@@ -158,7 +144,6 @@ function aplicarRateio() {
 function calcularConsumo() {
   const pessoas = num(document.getElementById("familySize").value);
   const dias = num(document.getElementById("purchaseDays").value);
-
   if (!pessoas || !dias) return;
 
   cart.forEach(i => {
@@ -189,37 +174,31 @@ function renderCart() {
   });
 }
 
-/* ================= EDITAR ================= */
+/* ================= EDITAR / REMOVER ================= */
 function editItem(idx) {
   const i = cart[idx];
-
   const novoPreco = num(prompt("Novo preço unitário:", i.precoUnitario));
-  const novosPacotes = num(prompt("Nova quantidade de pacotes:", i.pacotes));
-
+  const novosPacotes = num(prompt("Nova quantidade:", i.pacotes));
   if (novoPreco <= 0 || novosPacotes <= 0) return;
 
   i.precoUnitario = novoPreco;
   i.pacotes = novosPacotes;
-  i.subtotal = i.precoUnitario * i.pacotes;
-  i.quantidadeKg = i.pesoPacote
-    ? novosPacotes * i.pesoPacote
-    : novosPacotes;
+  i.subtotal = novoPreco * novosPacotes;
+  i.quantidadeKg = i.pesoPacote ? novosPacotes * i.pesoPacote : novosPacotes;
 
   aplicarRateio();
   renderCart();
 }
 
-/* ================= REMOVER ================= */
 function removeItem(idx) {
   cart.splice(idx, 1);
   aplicarRateio();
   renderCart();
 }
 
-/* ================= FINALIZAR COMPRA ================= */
+/* ================= FINALIZAR ================= */
 function finalizePurchase() {
   if (!cart.length) return alert("Carrinho vazio");
-
   const market = document.getElementById("market").value.trim();
   if (!market) return alert("Informe o mercado");
 
@@ -247,10 +226,8 @@ function copyPreviousPurchase() {
   const ultima = history.at(-1);
   cart = JSON.parse(JSON.stringify(ultima.itens));
 
-  document.getElementById("transportCost").value =
-    ultima.transporte || "";
-  document.getElementById("budget").value =
-    ultima.orcamento || "";
+  document.getElementById("transportCost").value = ultima.transporte || "";
+  document.getElementById("budget").value = ultima.orcamento || "";
 
   renderCart();
 }
@@ -258,14 +235,11 @@ function copyPreviousPurchase() {
 /* ================= HISTÓRICO / CUPOM ================= */
 function atualizarHistorico() {
   const select = document.getElementById("historySelect");
-  select.innerHTML = `<option value="">Selecione</option>`;
+  if (!select) return;
 
+  select.innerHTML = `<option value="">Selecione</option>`;
   history.forEach((h, i) => {
-    select.innerHTML += `
-      <option value="${i}">
-        ${h.data} - ${h.mercado}
-      </option>
-    `;
+    select.innerHTML += `<option value="${i}">${h.data} - ${h.mercado}</option>`;
   });
 }
 
@@ -275,38 +249,16 @@ function showReceipt() {
   if (!h) return;
 
   const div = document.getElementById("receipt");
-  let subtotalProdutos = 0;
-  let totalRateio = 0;
+  let subtotal = 0, rateio = 0;
 
-  div.innerHTML = `
-    <h3>🧾 CUPOM FISCAL</h3>
-    <strong>Mercado:</strong> ${h.mercado}<br>
-    <strong>Data:</strong> ${h.data}
-    <hr>
-  `;
-
+  div.innerHTML = `<h3>🧾 CUPOM FISCAL</h3><strong>${h.mercado}</strong><hr>`;
   h.itens.forEach(i => {
-    subtotalProdutos += i.subtotal;
-    totalRateio += i.rateio;
-
-    div.innerHTML += `
-      <strong>${i.nome}</strong><br>
-      Quantidade: ${i.pacotes}<br>
-      Quantidade total: ${i.quantidadeKg.toFixed(2)} kg<br>
-      Unitário: ${moeda(i.precoUnitario)}<br>
-      Subtotal: ${moeda(i.subtotal)}<br>
-      Rateio: ${moeda(i.rateio)}<br>
-      Consumo diário/pessoa: ${i.consumoPessoaDia.toFixed(3)} kg
-      <hr>
-    `;
+    subtotal += i.subtotal;
+    rateio += i.rateio;
+    div.innerHTML += `${i.nome} – ${moeda(i.total)}<br>`;
   });
 
-  div.innerHTML += `
-    <strong>Subtotal produtos:</strong> ${moeda(subtotalProdutos)}<br>
-    <strong>Deslocamento:</strong> ${moeda(totalRateio)}<br>
-    <hr>
-    <h3>Total geral: ${moeda(subtotalProdutos + totalRateio)}</h3>
-  `;
+  div.innerHTML += `<hr><strong>Total:</strong> ${moeda(subtotal + rateio)}`;
 }
 
 /* ================= COMPARAÇÃO ================= */
@@ -315,24 +267,19 @@ function gerarComparacao() {
   if (!tbody || history.length < 2) return;
 
   tbody.innerHTML = "";
-
-  const a = history.at(-1);
-  const b = history.at(-2);
+  const a = history.at(-1), b = history.at(-2);
 
   a.itens.forEach(i => {
     const ant = b.itens.find(x => x.nome === i.nome);
     if (!ant) return;
-
-    const diff = i.precoUnitario - ant.precoUnitario;
 
     tbody.innerHTML += `
       <tr>
         <td>${i.nome}</td>
         <td>${moeda(ant.precoUnitario)}</td>
         <td>${moeda(i.precoUnitario)}</td>
-        <td>${moeda(diff)}</td>
-      </tr>
-    `;
+        <td>${moeda(i.precoUnitario - ant.precoUnitario)}</td>
+      </tr>`;
   });
 }
 
@@ -342,7 +289,6 @@ function analisarMercados() {
   if (!div || history.length < 2) return;
 
   const resumo = {};
-
   history.forEach(c => {
     const total = c.itens.reduce((s, i) => s + i.total, 0);
     resumo[c.mercado] = resumo[c.mercado] || { total: 0, n: 0 };
@@ -357,17 +303,13 @@ function analisarMercados() {
   div.innerHTML = `🏆 ${melhor.m} – Média ${moeda(melhor.media)}`;
 }
 
-/* ================= LIMPAR CAMPOS ================= */
+/* ================= LIMPAR / NOVA COMPRA ================= */
 function limparCampos() {
-  document.getElementById("productName").value = "";
-  document.getElementById("price").value = "";
-  document.getElementById("quantity").value = "";
-  document.getElementById("weightPerUnit").value = "";
-  document.getElementById("unitHint").style.display = "none";
-  document.getElementById("weightPerUnitWrapper").style.display = "none";
+  ["productName","price","quantity","weightPerUnit"].forEach(id =>
+    document.getElementById(id).value = ""
+  );
 }
 
-/* ================= NOVA COMPRA ================= */
 function newPurchase() {
   cart = [];
   renderCart();
@@ -375,7 +317,19 @@ function newPurchase() {
   document.getElementById("transportCost").value = "";
 }
 
+/* ================= VOZ ================= */
+let recognition;
+if ("webkitSpeechRecognition" in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = "pt-BR";
+}
+function startVoice() {
+  if (!recognition) return alert("Voz não suportada");
+  recognition.start();
+}
+
 /* ================= INIT ================= */
 renderCatalog();
 atualizarHistorico();
 analisarMercados();
+
