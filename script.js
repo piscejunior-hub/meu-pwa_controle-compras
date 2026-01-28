@@ -235,11 +235,14 @@ function copyPreviousPurchase() {
 /* ================= HISTÓRICO / CUPOM ================= */
 function atualizarHistorico() {
   const select = document.getElementById("historySelect");
-  if (!select) return;
-
   select.innerHTML = `<option value="">Selecione</option>`;
+
   history.forEach((h, i) => {
-    select.innerHTML += `<option value="${i}">${h.data} - ${h.mercado}</option>`;
+    select.innerHTML += `
+      <option value="${i}">
+        ${h.data} - ${h.mercado}
+      </option>
+    `;
   });
 }
 
@@ -249,16 +252,38 @@ function showReceipt() {
   if (!h) return;
 
   const div = document.getElementById("receipt");
-  let subtotal = 0, rateio = 0;
+  let subtotalProdutos = 0;
+  let totalRateio = 0;
 
-  div.innerHTML = `<h3>🧾 CUPOM FISCAL</h3><strong>${h.mercado}</strong><hr>`;
+  div.innerHTML = `
+    <h3>🧾 CUPOM FISCAL</h3>
+    <strong>Mercado:</strong> ${h.mercado}<br>
+    <strong>Data:</strong> ${h.data}
+    <hr>
+  `;
+
   h.itens.forEach(i => {
-    subtotal += i.subtotal;
-    rateio += i.rateio;
-    div.innerHTML += `${i.nome} – ${moeda(i.total)}<br>`;
+    subtotalProdutos += i.subtotal;
+    totalRateio += i.rateio;
+
+    div.innerHTML += `
+      <strong>${i.nome}</strong><br>
+      Quantidade: ${i.pacotes}<br>
+      Quantidade total: ${i.quantidadeKg.toFixed(2)} kg<br>
+      Unitário: ${moeda(i.precoUnitario)}<br>
+      Subtotal: ${moeda(i.subtotal)}<br>
+      Rateio: ${moeda(i.rateio)}<br>
+      Consumo diário/pessoa: ${i.consumoPessoaDia.toFixed(3)} kg
+      <hr>
+    `;
   });
 
-  div.innerHTML += `<hr><strong>Total:</strong> ${moeda(subtotal + rateio)}`;
+  div.innerHTML += `
+    <strong>Subtotal produtos:</strong> ${moeda(subtotalProdutos)}<br>
+    <strong>Deslocamento:</strong> ${moeda(totalRateio)}<br>
+    <hr>
+    <h3>Total geral: ${moeda(subtotalProdutos + totalRateio)}</h3>
+  `;
 }
 
 /* ================= COMPARAÇÃO ================= */
@@ -332,4 +357,5 @@ function startVoice() {
 renderCatalog();
 atualizarHistorico();
 analisarMercados();
+
 
