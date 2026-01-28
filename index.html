@@ -39,6 +39,30 @@
       display: block;
     }
 
+    /* ===== VOZ ===== */
+    .voice-area {
+      margin: 15px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .voice-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 14px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      background: linear-gradient(135deg, #7b2ff7, #4a00e0);
+      color: #fff;
+    }
+
+    .voice-status {
+      font-size: 14px;
+      color: #d9d9ff;
+    }
+
     /* ===== CONSUMO IDEAL ===== */
     .consumo-grid {
       display: grid;
@@ -88,6 +112,24 @@
 <body>
 
 <h1>🛒 Lista de Compras Inteligente</h1>
+
+<!-- ===== COMANDO DE VOZ ===== -->
+<div class="voice-area">
+  <button
+    class="voice-btn"
+    onclick="startVoice()"
+    aria-label="Ativar comando de voz"
+  >
+    🎤 Falar
+  </button>
+  <div
+    id="voiceStatus"
+    class="voice-status"
+    aria-live="polite"
+  >
+    🎤 Pronto para ouvir
+  </div>
+</div>
 
 <!-- ===== NAV ABAS ===== -->
 <nav class="tabs">
@@ -166,52 +208,20 @@
 
 <!-- ===== ABA CONSUMO IDEAL ===== -->
 <div id="tab-consumo" class="tab">
-
   <section class="card">
     <h2>🍽️ Consumo diário ideal (por pessoa)</h2>
-
     <div class="consumo-grid">
-
-      <div class="consumo-card">
-        <span class="emoji">🍚</span>
-        <strong>Arroz</strong>
-        <p>≈ 100 g / dia</p>
-        <small>1 escumadeira</small>
-      </div>
-
-      <div class="consumo-card">
-        <span class="emoji">🫘</span>
-        <strong>Feijão</strong>
-        <p>≈ 120 g / dia</p>
-        <small>1 concha</small>
-      </div>
-
-      <div class="consumo-card">
-        <span class="emoji">🥩</span>
-        <strong>Carne</strong>
-        <p>≈ 180 g / dia</p>
-        <small>1 bife médio</small>
-      </div>
-
-      <div class="consumo-card">
-        <span class="emoji">🥛</span>
-        <strong>Leite</strong>
-        <p>≈ 200 ml / dia</p>
-        <small>1 copo</small>
-      </div>
-
+      <div class="consumo-card"><span class="emoji">🍚</span><strong>Arroz</strong><p>≈ 100 g / dia</p><small>1 escumadeira</small></div>
+      <div class="consumo-card"><span class="emoji">🫘</span><strong>Feijão</strong><p>≈ 120 g / dia</p><small>1 concha</small></div>
+      <div class="consumo-card"><span class="emoji">🥩</span><strong>Carne</strong><p>≈ 180 g / dia</p><small>1 bife médio</small></div>
+      <div class="consumo-card"><span class="emoji">🥛</span><strong>Leite</strong><p>≈ 200 ml / dia</p><small>1 copo</small></div>
     </div>
-
-    <p class="hint">
-      ℹ️ Valores médios para adultos. Ajuste conforme idade, dieta e atividade física.
-    </p>
+    <p class="hint">ℹ️ Valores médios para adultos.</p>
   </section>
-
 </div>
 
 <!-- ===== ABA ANÁLISES ===== -->
 <div id="tab-analise" class="tab">
-
   <section class="card">
     <h2>📊 Comparação com compra anterior</h2>
     <table>
@@ -231,18 +241,15 @@
     <h2>🏆 Melhor mercado</h2>
     <div id="melhorMercado"></div>
   </section>
-
 </div>
 
 <!-- ===== ABA HISTÓRICO ===== -->
 <div id="tab-historico" class="tab">
-
   <section class="card">
     <h2>📜 Histórico</h2>
     <select id="historySelect" onchange="showReceipt()"></select>
     <div id="receipt"></div>
   </section>
-
 </div>
 
 <script src="script.js"></script>
@@ -262,3 +269,7 @@
 
 </body>
 </html>
+
+</body>
+</html>
+
