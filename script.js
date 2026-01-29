@@ -102,3 +102,4 @@ function falar(msg){
   s.lang = "pt-BR";
   speechSynthesis.speak(s);
 }
+
