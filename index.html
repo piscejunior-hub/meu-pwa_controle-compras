@@ -5,58 +5,70 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Compras por Voz</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6a0dad">
-
 <style>
 body {
-  font-family: Arial, sans-serif;
-  background: #1b1026;
-  color: #fff;
   margin: 0;
-  padding: 16px;
+  font-family: Arial, sans-serif;
+  background: #0f0b1e;
+  color: #fff;
 }
 
 h1 {
   text-align: center;
-  margin-bottom: 10px;
+  margin: 15px 0;
 }
 
-.section {
-  border-radius: 16px;
-  padding: 14px;
-  margin-bottom: 12px;
-}
-
-.roxo { background: linear-gradient(135deg,#7b2ff7,#4a00e0); }
-.azul { background: #1e3a8a; }
-.verde { background: #065f46; }
-.laranja { background: #9a3412; }
-
-button {
-  width: 100%;
-  padding: 14px;
-  margin-top: 8px;
-  border-radius: 14px;
+.voice-main {
+  background: linear-gradient(135deg,#7b2ff7,#4a00e0);
   border: none;
-  font-size: 16px;
+  width: 90%;
+  margin: 10px auto;
+  padding: 20px;
+  border-radius: 18px;
+  font-size: 22px;
   font-weight: bold;
+  color: #fff;
+  display: block;
   cursor: pointer;
 }
 
-#voiceStatus {
-  margin-top: 8px;
+.status {
+  text-align: center;
   font-size: 14px;
+  color: #dcd6ff;
+  margin-bottom: 10px;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
+.line {
+  width: 90%;
+  margin: 10px auto;
+  padding: 14px;
+  border-radius: 14px;
 }
 
-li {
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255,255,255,.2);
+.l1 { background:#3a136a; }
+.l2 { background:#4a1b88; }
+.l3 { background:#5a25a5; }
+.l4 { background:#6b30c2; }
+
+.line strong {
+  display:block;
+  margin-bottom:6px;
+}
+
+#shoppingList li {
+  background:#2a1b44;
+  margin:8px 0;
+  padding:10px;
+  border-radius:10px;
+  list-style:none;
+}
+
+.total {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  margin: 15px;
 }
 </style>
 </head>
@@ -65,26 +77,30 @@ li {
 
 <h1>🛒 Compras por Voz</h1>
 
-<div class="section roxo">
-  <button onclick="startVoice()">🎤 Falar</button>
-  <div id="voiceStatus">Pronto para ouvir</div>
+<button class="voice-main" onclick="startVoice()">🎤 FALAR</button>
+<div id="voiceStatus" class="status">Diga: "Adicionar arroz cinco quilos por trinta reais"</div>
+
+<div class="line l1">
+  <strong>📦 Último produto reconhecido</strong>
+  <div id="lastProduct">Nenhum</div>
 </div>
 
-<div class="section azul">
-  <strong>Produto em edição:</strong>
-  <div id="currentProduct">Nenhum</div>
+<div class="line l2">
+  <strong>🧮 Quantidade / Peso</strong>
+  <div id="lastQty">—</div>
 </div>
 
-<div class="section verde">
-  <strong>Carrinho:</strong>
-  <ul id="cart"></ul>
-  <div id="total"></div>
+<div class="line l3">
+  <strong>💰 Preço</strong>
+  <div id="lastPrice">—</div>
 </div>
 
-<div class="section laranja">
-  <button onclick="finalizar()">✅ Finalizar compra</button>
-  <button onclick="nova()">🆕 Nova compra</button>
+<div class="line l4">
+  <strong>🧾 Carrinho</strong>
+  <ul id="shoppingList"></ul>
 </div>
+
+<div class="total" id="totalGeral">Total: R$ 0,00</div>
 
 <script src="script.js"></script>
 </body>
