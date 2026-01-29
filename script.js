@@ -23,8 +23,8 @@ function num(v) {
 
 /* ================= PRODUTOS POR PESO ================= */
 const produtosPorPeso = [
-  "arroz","feijão","feijao","açúcar","acucar",
-  "farinha","macarrão","macarrao",
+  "arroz","feijao","feijão","acucar","açúcar",
+  "farinha","macarrao","macarrão",
   "carne","frango","peixe","sal"
 ];
 
@@ -160,6 +160,12 @@ function renderCart() {
   });
 }
 
+function removeItem(idx) {
+  cart.splice(idx, 1);
+  aplicarRateio();
+  renderCart();
+}
+
 /* ================= FINALIZAR ================= */
 function finalizePurchase() {
   if (!cart.length) return alert("Carrinho vazio");
@@ -177,7 +183,46 @@ function finalizePurchase() {
 
   salvar();
   atualizarHistorico();
+  analisarMercados();
   newPurchase();
+}
+
+function newPurchase() {
+  cart = [];
+  renderCart();
+  market.value = "";
+  transportCost.value = "";
+}
+
+/* ================= HISTÓRICO ================= */
+function atualizarHistorico() {
+  const select = document.getElementById("historySelect");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">Selecione</option>`;
+  history.forEach((h, i) => {
+    select.innerHTML += `<option value="${i}">${h.data} - ${h.mercado}</option>`;
+  });
+}
+
+function copyPreviousPurchase() {
+  if (!history.length) return alert("Nenhuma compra anterior");
+  const ultima = history.at(-1);
+  cart = JSON.parse(JSON.stringify(ultima.itens));
+  transportCost.value = ultima.transporte || "";
+  budget.value = ultima.orcamento || "";
+  renderCart();
+}
+
+function showReceipt() {
+  const idx = historySelect.value;
+  if (!history[idx]) return;
+  receipt.innerHTML = `<pre>${JSON.stringify(history[idx], null, 2)}</pre>`;
+}
+
+/* ================= ANÁLISE ================= */
+function analisarMercados() {
+  if (history.length < 2) return;
 }
 
 /* ================= VOZ ================= */
@@ -188,8 +233,11 @@ if ("webkitSpeechRecognition" in window) {
   recognition.continuous = true;
 
   recognition.onresult = e => {
-    const texto = e.results[e.results.length - 1][0].transcript.toLowerCase();
-    console.log("🎤", texto);
+    let texto = e.results[e.results.length - 1][0].transcript
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
     interpretarComando(texto);
   };
 }
@@ -202,12 +250,12 @@ function startVoice() {
 /* ================= INTERPRETAÇÃO ================= */
 function interpretarComando(t) {
   if (t.includes("produto")) productName.value = t.replace("produto", "").trim();
-  if (t.includes("preço")) price.value = extrairNumero(t);
+  if (t.includes("preco")) price.value = extrairNumero(t);
   if (t.includes("quantidade")) quantity.value = extrairNumero(t);
   if (t.includes("peso")) weightPerUnit.value = extrairNumero(t);
   if (t.includes("mercado")) market.value = t.replace("mercado", "").trim();
   if (t.includes("transporte")) transportCost.value = extrairNumero(t);
-  if (t.includes("orçamento")) budget.value = extrairNumero(t);
+  if (t.includes("orcamento")) budget.value = extrairNumero(t);
   if (t.includes("pessoas")) familySize.value = extrairNumero(t);
   if (t.includes("dias")) purchaseDays.value = extrairNumero(t);
 
