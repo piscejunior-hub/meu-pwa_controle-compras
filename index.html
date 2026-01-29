@@ -1,107 +1,278 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Compras por Voz</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Lista de Compras Inteligente</title>
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f0b1e;
-  color: #fff;
-}
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1f2937">
+  <link rel="stylesheet" href="style.css">
 
-h1 {
-  text-align: center;
-  margin: 15px 0;
-}
+  <style>
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
 
-.voice-main {
-  background: linear-gradient(135deg,#7b2ff7,#4a00e0);
-  border: none;
-  width: 90%;
-  margin: 10px auto;
-  padding: 20px;
-  border-radius: 18px;
-  font-size: 22px;
-  font-weight: bold;
-  color: #fff;
-  display: block;
-  cursor: pointer;
-}
+    .tabs button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      background: #2a243f;
+      color: #fff;
+      font-weight: bold;
+    }
 
-.status {
-  text-align: center;
-  font-size: 14px;
-  color: #dcd6ff;
-  margin-bottom: 10px;
-}
+    .tabs button.active {
+      background: linear-gradient(135deg, #8e2de2, #4a00e0);
+    }
 
-.line {
-  width: 90%;
-  margin: 10px auto;
-  padding: 14px;
-  border-radius: 14px;
-}
+    .tab {
+      display: none;
+    }
 
-.l1 { background:#3a136a; }
-.l2 { background:#4a1b88; }
-.l3 { background:#5a25a5; }
-.l4 { background:#6b30c2; }
+    .tab.active {
+      display: block;
+    }
 
-.line strong {
-  display:block;
-  margin-bottom:6px;
-}
+    /* ===== VOZ ===== */
+    .voice-area {
+      margin: 15px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
 
-#shoppingList li {
-  background:#2a1b44;
-  margin:8px 0;
-  padding:10px;
-  border-radius:10px;
-  list-style:none;
-}
+    .voice-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 14px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      background: linear-gradient(135deg, #7b2ff7, #4a00e0);
+      color: #fff;
+    }
 
-.total {
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
-  margin: 15px;
-}
-</style>
+    .voice-status {
+      font-size: 14px;
+      color: #d9d9ff;
+    }
+
+    /* ===== CONSUMO IDEAL ===== */
+    .consumo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .consumo-card {
+      background: #3a2c5d;
+      border-radius: 16px;
+      padding: 14px;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    .consumo-card .emoji {
+      font-size: 28px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .consumo-card strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .consumo-card p {
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .consumo-card small {
+      font-size: 12px;
+      color: #d9d9ff;
+    }
+
+    .hint {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #d9d9ff;
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>🛒 Compras por Voz</h1>
+<h1>🛒 Lista de Compras Inteligente</h1>
 
-<button class="voice-main" onclick="startVoice()">🎤 FALAR</button>
-<div id="voiceStatus" class="status">Diga: "Adicionar arroz cinco quilos por trinta reais"</div>
-
-<div class="line l1">
-  <strong>📦 Último produto reconhecido</strong>
-  <div id="lastProduct">Nenhum</div>
+<!-- ===== COMANDO DE VOZ ===== -->
+<div class="voice-area">
+  <button
+    class="voice-btn"
+    onclick="startVoice()"
+    aria-label="Ativar comando de voz"
+  >
+    🎤 Falar
+  </button>
+  <div
+    id="voiceStatus"
+    class="voice-status"
+    aria-live="polite"
+  >
+    🎤 Pronto para ouvir
+  </div>
 </div>
 
-<div class="line l2">
-  <strong>🧮 Quantidade / Peso</strong>
-  <div id="lastQty">—</div>
+<!-- ===== NAV ABAS ===== -->
+<nav class="tabs">
+  <button class="active" onclick="openTab('tab-compra', this)">🛒 Compra</button>
+  <button onclick="openTab('tab-consumo', this)">🍽️ Consumo Ideal</button>
+  <button onclick="openTab('tab-analise', this)">📊 Análises</button>
+  <button onclick="openTab('tab-historico', this)">📜 Histórico</button>
+</nav>
+
+<!-- ===== ABA COMPRA ===== -->
+<div id="tab-compra" class="tab active">
+
+  <section class="card">
+    <h2>💰 Orçamento</h2>
+    <input type="number" id="budget" placeholder="Valor disponível (R$)" step="0.01">
+    <p id="budgetInfo"></p>
+  </section>
+
+  <section class="card">
+    <h2>👨‍👩‍👧‍👦 Família & Consumo</h2>
+    <input type="number" id="familySize" placeholder="Número de pessoas" min="1">
+    <input type="number" id="purchaseDays" placeholder="Compra para quantos dias?" min="1">
+  </section>
+
+  <section class="card">
+    <h2>🚕 Custo de deslocamento</h2>
+    <input type="number" id="transportCost" placeholder="Uber / passagem / combustível" step="0.01">
+  </section>
+
+  <section class="card">
+    <h2>➕ Adicionar produto</h2>
+
+    <select id="productSelect"></select>
+
+    <input type="text" id="productName" placeholder="Novo produto (opcional)">
+
+    <small id="unitHint" style="display:none"></small>
+
+    <select id="unit">
+      <option value="un">Unidade</option>
+      <option value="kg">Kg</option>
+      <option value="g">Gramas</option>
+      <option value="l">Litro</option>
+      <option value="ml">Mililitro</option>
+    </select>
+
+    <select id="priceType">
+      <option value="unit">Preço unitário / kg</option>
+      <option value="total">Preço total pago</option>
+    </select>
+
+    <input type="number" id="price" placeholder="Preço (R$)" step="0.01">
+    <input type="number" id="quantity" placeholder="Quantidade" step="0.001">
+
+    <div id="weightPerUnitWrapper" style="display:none">
+      <label>Peso por unidade (kg)</label>
+      <input type="number" id="weightPerUnit" step="0.01">
+    </div>
+
+    <button onclick="addItem()">Adicionar produto</button>
+  </section>
+
+  <section class="card">
+    <h2>🧾 Compra atual</h2>
+
+    <input id="market" placeholder="Ex: Assaí, Atacadão">
+
+    <ul id="shoppingList"></ul>
+
+    <button onclick="finalizePurchase()">Finalizar compra</button>
+    <button class="secondary" onclick="newPurchase()">Nova compra</button>
+    <button onclick="copyPreviousPurchase()">📋 Copiar compra anterior</button>
+  </section>
+
 </div>
 
-<div class="line l3">
-  <strong>💰 Preço</strong>
-  <div id="lastPrice">—</div>
+<!-- ===== ABA CONSUMO IDEAL ===== -->
+<div id="tab-consumo" class="tab">
+  <section class="card">
+    <h2>🍽️ Consumo diário ideal (por pessoa)</h2>
+    <div class="consumo-grid">
+      <div class="consumo-card"><span class="emoji">🍚</span><strong>Arroz</strong><p>≈ 100 g / dia</p><small>1 escumadeira</small></div>
+      <div class="consumo-card"><span class="emoji">🫘</span><strong>Feijão</strong><p>≈ 120 g / dia</p><small>1 concha</small></div>
+      <div class="consumo-card"><span class="emoji">🥩</span><strong>Carne</strong><p>≈ 180 g / dia</p><small>1 bife médio</small></div>
+      <div class="consumo-card"><span class="emoji">🥛</span><strong>Leite</strong><p>≈ 200 ml / dia</p><small>1 copo</small></div>
+    </div>
+    <p class="hint">ℹ️ Valores médios para adultos.</p>
+  </section>
 </div>
 
-<div class="line l4">
-  <strong>🧾 Carrinho</strong>
-  <ul id="shoppingList"></ul>
+<!-- ===== ABA ANÁLISES ===== -->
+<div id="tab-analise" class="tab">
+  <section class="card">
+    <h2>📊 Comparação com compra anterior</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Anterior</th>
+          <th>Atual</th>
+          <th>Diferença</th>
+        </tr>
+      </thead>
+      <tbody id="compareTable"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>🏆 Melhor mercado</h2>
+    <div id="melhorMercado"></div>
+  </section>
 </div>
 
-<div class="total" id="totalGeral">Total: R$ 0,00</div>
+<!-- ===== ABA HISTÓRICO ===== -->
+<div id="tab-historico" class="tab">
+
+  <section class="card">
+    <h2>📜 Histórico</h2>
+    <select id="historySelect" onchange="showReceipt()"></select>
+    <div id="receipt"></div>
+  </section>
+
+</div>
 
 <script src="script.js"></script>
+
+<script>
+  function openTab(tabId, btn) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+    document.getElementById(tabId).classList.add("active");
+    btn.classList.add("active");
+  }
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js");
+  }
+</script>
+
 </body>
 </html>
+
+</body>
+</html>
+
+
