@@ -23,8 +23,8 @@ function num(v) {
 
 /* ================= PRODUTOS POR PESO ================= */
 const produtosPorPeso = [
-  "arroz","feijao","feijão","acucar","açúcar",
-  "farinha","macarrao","macarrão",
+  "arroz","feijão","feijao","açúcar","acucar",
+  "farinha","macarrão","macarrao",
   "carne","frango","peixe","sal"
 ];
 
@@ -69,13 +69,25 @@ function renderCatalog() {
   });
 }
 
+document.getElementById("productSelect")?.addEventListener("change", e => {
+  const nome = e.target.value;
+  if (!catalog[nome]) return;
+  document.getElementById("productName").value = nome;
+  document.getElementById("price").value = catalog[nome].price.toFixed(2);
+  mostrarDicaUnidade(nome);
+});
+
+document.getElementById("productName")?.addEventListener("input", e =>
+  mostrarDicaUnidade(e.target.value)
+);
+
 /* ================= ADICIONAR ITEM ================= */
 function addItem() {
-  const nome = productName.value.trim();
-  const preco = num(price.value);
-  const pacotes = num(quantity.value);
-  const pesoPacote = num(weightPerUnit.value);
-  const tipoPreco = priceType.value;
+  const nome = document.getElementById("productName").value.trim();
+  const preco = num(document.getElementById("price").value);
+  const pacotes = num(document.getElementById("quantity").value);
+  const pesoPacote = num(document.getElementById("weightPerUnit").value);
+  const tipoPreco = document.getElementById("priceType").value;
 
   if (!nome || preco <= 0 || pacotes <= 0) {
     alert("Preencha corretamente os campos");
@@ -117,7 +129,7 @@ function addItem() {
 
 /* ================= RATEIO ================= */
 function aplicarRateio() {
-  const custo = num(transportCost.value);
+  const custo = num(document.getElementById("transportCost").value);
   const rateio = cart.length ? custo / cart.length : 0;
 
   cart.forEach(i => {
@@ -130,8 +142,8 @@ function aplicarRateio() {
 
 /* ================= CONSUMO ================= */
 function calcularConsumo() {
-  const pessoas = num(familySize.value);
-  const dias = num(purchaseDays.value);
+  const pessoas = num(document.getElementById("familySize").value);
+  const dias = num(document.getElementById("purchaseDays").value);
   if (!pessoas || !dias) return;
 
   cart.forEach(i => {
@@ -141,23 +153,41 @@ function calcularConsumo() {
 
 /* ================= CARRINHO ================= */
 function renderCart() {
-  shoppingList.innerHTML = "";
+  const ul = document.getElementById("shoppingList");
+  ul.innerHTML = "";
 
   cart.forEach((i, idx) => {
-    shoppingList.innerHTML += `
+    ul.innerHTML += `
       <li class="item-card">
         <strong>${i.nome}</strong><br>
         Quantidade: ${i.pacotes}<br>
-        Total: ${i.quantidadeKg.toFixed(2)} kg<br>
-        Unitário: ${moeda(i.precoUnitario)}<br>
+        Quantidade total: ${i.quantidadeKg.toFixed(2)} kg<br>
+        Preço unitário: ${moeda(i.precoUnitario)}<br>
         Subtotal: ${moeda(i.subtotal)}<br>
         Rateio: ${moeda(i.rateio)}<br>
-        Consumo/dia/pessoa: ${i.consumoPessoaDia.toFixed(3)} kg<br>
+        Consumo diário/pessoa: ${i.consumoPessoaDia.toFixed(3)} kg<br>
         <strong>Total: ${moeda(i.total)}</strong><br>
+        <button onclick="editItem(${idx})">✏️ Editar</button>
         <button onclick="removeItem(${idx})">🗑 Excluir</button>
       </li>
     `;
   });
+}
+
+/* ================= EDITAR / REMOVER ================= */
+function editItem(idx) {
+  const i = cart[idx];
+  const novoPreco = num(prompt("Novo preço unitário:", i.precoUnitario));
+  const novosPacotes = num(prompt("Nova quantidade:", i.pacotes));
+  if (novoPreco <= 0 || novosPacotes <= 0) return;
+
+  i.precoUnitario = novoPreco;
+  i.pacotes = novosPacotes;
+  i.subtotal = novoPreco * novosPacotes;
+  i.quantidadeKg = i.pesoPacote ? novosPacotes * i.pesoPacote : novosPacotes;
+
+  aplicarRateio();
+  renderCart();
 }
 
 function removeItem(idx) {
@@ -169,60 +199,147 @@ function removeItem(idx) {
 /* ================= FINALIZAR ================= */
 function finalizePurchase() {
   if (!cart.length) return alert("Carrinho vazio");
-  if (!market.value.trim()) return alert("Informe o mercado");
+  const market = document.getElementById("market").value.trim();
+  if (!market) return alert("Informe o mercado");
 
   aplicarRateio();
 
   history.push({
     data: new Date().toLocaleString(),
-    mercado: market.value,
-    transporte: num(transportCost.value),
-    orcamento: num(budget.value),
+    mercado: market,
+    transporte: num(document.getElementById("transportCost").value),
+    orcamento: num(document.getElementById("budget").value),
     itens: JSON.parse(JSON.stringify(cart))
   });
 
   salvar();
   atualizarHistorico();
+  gerarComparacao();
   analisarMercados();
   newPurchase();
+}
+
+/* ================= COPIAR COMPRA ANTERIOR ================= */
+function copyPreviousPurchase() {
+  if (!history.length) return alert("Nenhuma compra anterior");
+
+  const ultima = history.at(-1);
+  cart = JSON.parse(JSON.stringify(ultima.itens));
+
+  document.getElementById("transportCost").value = ultima.transporte || "";
+  document.getElementById("budget").value = ultima.orcamento || "";
+
+  renderCart();
+}
+
+/* ================= HISTÓRICO / CUPOM ================= */
+function atualizarHistorico() {
+  const select = document.getElementById("historySelect");
+  select.innerHTML = `<option value="">Selecione</option>`;
+
+  history.forEach((h, i) => {
+    select.innerHTML += `
+      <option value="${i}">
+        ${h.data} - ${h.mercado}
+      </option>
+    `;
+  });
+}
+
+function showReceipt() {
+  const idx = document.getElementById("historySelect").value;
+  const h = history[idx];
+  if (!h) return;
+
+  const div = document.getElementById("receipt");
+  let subtotalProdutos = 0;
+  let totalRateio = 0;
+
+  div.innerHTML = `
+    <h3>🧾 CUPOM FISCAL</h3>
+    <strong>Mercado:</strong> ${h.mercado}<br>
+    <strong>Data:</strong> ${h.data}
+    <hr>
+  `;
+
+  h.itens.forEach(i => {
+    subtotalProdutos += i.subtotal;
+    totalRateio += i.rateio;
+
+    div.innerHTML += `
+      <strong>${i.nome}</strong><br>
+      Quantidade: ${i.pacotes}<br>
+      Quantidade total: ${i.quantidadeKg.toFixed(2)} kg<br>
+      Unitário: ${moeda(i.precoUnitario)}<br>
+      Subtotal: ${moeda(i.subtotal)}<br>
+      Rateio: ${moeda(i.rateio)}<br>
+      Consumo diário/pessoa: ${i.consumoPessoaDia.toFixed(3)} kg
+      <hr>
+    `;
+  });
+
+  div.innerHTML += `
+    <strong>Subtotal produtos:</strong> ${moeda(subtotalProdutos)}<br>
+    <strong>Deslocamento:</strong> ${moeda(totalRateio)}<br>
+    <hr>
+    <h3>Total geral: ${moeda(subtotalProdutos + totalRateio)}</h3>
+  `;
+}
+
+/* ================= COMPARAÇÃO ================= */
+function gerarComparacao() {
+  const tbody = document.getElementById("compareTable");
+  if (!tbody || history.length < 2) return;
+
+  tbody.innerHTML = "";
+  const a = history.at(-1), b = history.at(-2);
+
+  a.itens.forEach(i => {
+    const ant = b.itens.find(x => x.nome === i.nome);
+    if (!ant) return;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${i.nome}</td>
+        <td>${moeda(ant.precoUnitario)}</td>
+        <td>${moeda(i.precoUnitario)}</td>
+        <td>${moeda(i.precoUnitario - ant.precoUnitario)}</td>
+      </tr>`;
+  });
+}
+
+/* ================= MELHOR MERCADO ================= */
+function analisarMercados() {
+  const div = document.getElementById("melhorMercado");
+  if (!div || history.length < 2) return;
+
+  const resumo = {};
+  history.forEach(c => {
+    const total = c.itens.reduce((s, i) => s + i.total, 0);
+    resumo[c.mercado] = resumo[c.mercado] || { total: 0, n: 0 };
+    resumo[c.mercado].total += total;
+    resumo[c.mercado].n++;
+  });
+
+  const melhor = Object.entries(resumo)
+    .map(([m, d]) => ({ m, media: d.total / d.n }))
+    .sort((a, b) => a.media - b.media)[0];
+
+  div.innerHTML = `🏆 ${melhor.m} – Média ${moeda(melhor.media)}`;
+}
+
+/* ================= LIMPAR / NOVA COMPRA ================= */
+function limparCampos() {
+  ["productName","price","quantity","weightPerUnit"].forEach(id =>
+    document.getElementById(id).value = ""
+  );
 }
 
 function newPurchase() {
   cart = [];
   renderCart();
-  market.value = "";
-  transportCost.value = "";
-}
-
-/* ================= HISTÓRICO ================= */
-function atualizarHistorico() {
-  const select = document.getElementById("historySelect");
-  if (!select) return;
-
-  select.innerHTML = `<option value="">Selecione</option>`;
-  history.forEach((h, i) => {
-    select.innerHTML += `<option value="${i}">${h.data} - ${h.mercado}</option>`;
-  });
-}
-
-function copyPreviousPurchase() {
-  if (!history.length) return alert("Nenhuma compra anterior");
-  const ultima = history.at(-1);
-  cart = JSON.parse(JSON.stringify(ultima.itens));
-  transportCost.value = ultima.transporte || "";
-  budget.value = ultima.orcamento || "";
-  renderCart();
-}
-
-function showReceipt() {
-  const idx = historySelect.value;
-  if (!history[idx]) return;
-  receipt.innerHTML = `<pre>${JSON.stringify(history[idx], null, 2)}</pre>`;
-}
-
-/* ================= ANÁLISE ================= */
-function analisarMercados() {
-  if (history.length < 2) return;
+  document.getElementById("market").value = "";
+  document.getElementById("transportCost").value = "";
 }
 
 /* ================= VOZ ================= */
@@ -230,48 +347,15 @@ let recognition;
 if ("webkitSpeechRecognition" in window) {
   recognition = new webkitSpeechRecognition();
   recognition.lang = "pt-BR";
-  recognition.continuous = true;
-
-  recognition.onresult = e => {
-    let texto = e.results[e.results.length - 1][0].transcript
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
-    interpretarComando(texto);
-  };
 }
-
 function startVoice() {
   if (!recognition) return alert("Voz não suportada");
   recognition.start();
-}
-
-/* ================= INTERPRETAÇÃO ================= */
-function interpretarComando(t) {
-  if (t.includes("produto")) productName.value = t.replace("produto", "").trim();
-  if (t.includes("preco")) price.value = extrairNumero(t);
-  if (t.includes("quantidade")) quantity.value = extrairNumero(t);
-  if (t.includes("peso")) weightPerUnit.value = extrairNumero(t);
-  if (t.includes("mercado")) market.value = t.replace("mercado", "").trim();
-  if (t.includes("transporte")) transportCost.value = extrairNumero(t);
-  if (t.includes("orcamento")) budget.value = extrairNumero(t);
-  if (t.includes("pessoas")) familySize.value = extrairNumero(t);
-  if (t.includes("dias")) purchaseDays.value = extrairNumero(t);
-
-  if (t.includes("adicionar item")) addItem();
-  if (t.includes("finalizar compra")) finalizePurchase();
-  if (t.includes("nova compra")) newPurchase();
-  if (t.includes("copiar compra")) copyPreviousPurchase();
-  if (t.includes("mostrar cupom")) showReceipt();
-}
-
-function extrairNumero(t) {
-  const n = t.match(/[\d]+([.,]\d+)?/);
-  return n ? n[0].replace(",", ".") : "";
 }
 
 /* ================= INIT ================= */
 renderCatalog();
 atualizarHistorico();
 analisarMercados();
+
+
