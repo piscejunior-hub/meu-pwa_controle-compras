@@ -249,20 +249,7 @@ function finalizePurchase() {
   newPurchase();
 }
 
-/* ================= COPIAR COMPRA ANTERIOR ================= */
-function copyPreviousPurchase() {
-  if (!history.length) return alert("Nenhuma compra anterior");
-
-  const ultima = history.at(-1);
-  cart = JSON.parse(JSON.stringify(ultima.itens));
-
-  document.getElementById("transportCost").value = ultima.transporte || "";
-  document.getElementById("budget").value = ultima.orcamento || "";
-
-  renderCart();
-}
-
-/* ================= HISTÓRICO / CUPOM ================= */
+/* ================= HISTÓRICO ================= */
 function atualizarHistorico() {
   const select = document.getElementById("historySelect");
   select.innerHTML = `<option value="">Selecione</option>`;
@@ -274,6 +261,95 @@ function atualizarHistorico() {
       </option>
     `;
   });
+}
+
+function showReceipt() {
+  const idx = document.getElementById("historySelect").value;
+  const h = history[idx];
+  if (!h) return;
+
+  const div = document.getElementById("receipt");
+  let subtotal = 0;
+  let rateio = 0;
+
+  div.innerHTML = `<h3>🧾 CUPOM FISCAL</h3>`;
+
+  h.itens.forEach(i => {
+    subtotal += i.subtotal;
+    rateio += i.rateio;
+
+    div.innerHTML += `
+      <strong>${i.nome}</strong><br>
+      Quantidade: ${i.pacotes}<br>
+      Total: ${moeda(i.total)}
+      <hr>
+    `;
+  });
+
+  div.innerHTML += `
+    <strong>Total produtos:</strong> ${moeda(subtotal)}<br>
+    <strong>Deslocamento:</strong> ${moeda(rateio)}<br>
+    <h3>Total geral: ${moeda(subtotal + rateio)}</h3>
+  `;
+}
+
+/* ================= COMPARAÇÃO ================= */
+function gerarComparacao() {
+  const tbody = document.getElementById("compareTable");
+  if (!tbody || history.length < 2) return;
+
+  tbody.innerHTML = "";
+  const atual = history.at(-1);
+  const anterior = history.at(-2);
+
+  atual.itens.forEach(i => {
+    const ant = anterior.itens.find(x => x.nome === i.nome);
+    if (!ant) return;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${i.nome}</td>
+        <td>${moeda(ant.precoUnitario)}</td>
+        <td>${moeda(i.precoUnitario)}</td>
+        <td>${moeda(i.precoUnitario - ant.precoUnitario)}</td>
+      </tr>
+    `;
+  });
+}
+
+/* ================= MELHOR MERCADO ================= */
+function analisarMercados() {
+  const div = document.getElementById("melhorMercado");
+  if (!div || history.length < 2) return;
+
+  const resumo = {};
+  history.forEach(c => {
+    const total = c.itens.reduce((s, i) => s + i.total, 0);
+    resumo[c.mercado] = resumo[c.mercado] || { total: 0, n: 0 };
+    resumo[c.mercado].total += total;
+    resumo[c.mercado].n++;
+  });
+
+  const melhor = Object.entries(resumo)
+    .map(([m, d]) => ({ m, media: d.total / d.n }))
+    .sort((a, b) => a.media - b.media)[0];
+
+  div.innerHTML = `🏆 ${melhor.m} – Média ${moeda(melhor.media)}`;
+}
+
+/* ================= LIMPAR ================= */
+function limparCampos() {
+  ["productName","price","quantity","weightPerUnit"].forEach(id =>
+    document.getElementById(id).value = ""
+  );
+}
+
+function newPurchase() {
+  cart = [];
+  renderCart();
+  document.getElementById("market").value = "";
+  document.getElementById("transportCost").value = "";
+  atualizarOrcamento();
 }
 
 /* ================= VOZ ================= */
