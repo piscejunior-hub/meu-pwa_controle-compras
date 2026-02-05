@@ -21,7 +21,7 @@ function num(v) {
   return parseFloat(String(v).replace(",", ".")) || 0;
 }
 
-/* ================= NOVA FUNÇÃO - ORÇAMENTO ================= */
+/* ================= ORÇAMENTO ================= */
 function atualizarOrcamento() {
   const budgetInput = document.getElementById("budget");
   const info = document.getElementById("budgetInfo");
@@ -95,6 +95,19 @@ function renderCatalog() {
   });
 }
 
+/* ====== DETECÇÃO AUTOMÁTICA DE PRODUTO POR PESO ====== */
+document.getElementById("productSelect")?.addEventListener("change", e => {
+  const nome = e.target.value;
+  if (!catalog[nome]) return;
+  document.getElementById("productName").value = nome;
+  document.getElementById("price").value = catalog[nome].price.toFixed(2);
+  mostrarDicaUnidade(nome);
+});
+
+document.getElementById("productName")?.addEventListener("input", e => {
+  mostrarDicaUnidade(e.target.value);
+});
+
 /* ================= ADICIONAR ITEM ================= */
 function addItem() {
   const nome = document.getElementById("productName").value.trim();
@@ -139,7 +152,7 @@ function addItem() {
   renderCart();
   renderCatalog();
   limparCampos();
-  atualizarOrcamento(); // 🔹 NOVA CHAMADA
+  atualizarOrcamento();
 }
 
 /* ================= RATEIO ================= */
@@ -153,7 +166,7 @@ function aplicarRateio() {
   });
 
   calcularConsumo();
-  atualizarOrcamento(); // 🔹 NOVA CHAMADA
+  atualizarOrcamento();
 }
 
 /* ================= CONSUMO ================= */
@@ -188,7 +201,7 @@ function renderCart() {
     `;
   });
 
-  atualizarOrcamento(); // 🔹 NOVA CHAMADA
+  atualizarOrcamento();
 }
 
 /* ================= REMOVER ================= */
@@ -196,7 +209,6 @@ function removeItem(idx) {
   cart.splice(idx, 1);
   aplicarRateio();
   renderCart();
-  atualizarOrcamento(); // 🔹 NOVA CHAMADA
 }
 
 /* ================= LIMPAR / NOVA COMPRA ================= */
@@ -211,11 +223,11 @@ function newPurchase() {
   renderCart();
   document.getElementById("market").value = "";
   document.getElementById("transportCost").value = "";
-  atualizarOrcamento(); // 🔹 NOVA CHAMADA
+  atualizarOrcamento();
 }
 
 /* ================= INIT ================= */
 renderCatalog();
 atualizarHistorico();
 analisarMercados();
-atualizarOrcamento(); // 🔹 NOVA CHAMADA
+atualizarOrcamento();
