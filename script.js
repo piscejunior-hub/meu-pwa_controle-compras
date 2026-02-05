@@ -23,18 +23,18 @@ function num(v) {
 
 /* ================= ORÇAMENTO ================= */
 function atualizarOrcamento() {
-  const budgetInput = document.getElementById("budget");
+  const input = document.getElementById("budget");
   const info = document.getElementById("budgetInfo");
-  if (!budgetInput || !info) return;
+  if (!input || !info) return;
 
-  const budget = num(budgetInput.value);
+  const budget = num(input.value);
   if (budget <= 0) {
     info.innerHTML = "";
     return;
   }
 
-  const totalGasto = cart.reduce((s, i) => s + i.total, 0);
-  const saldo = budget - totalGasto;
+  const total = cart.reduce((s, i) => s + i.total, 0);
+  const saldo = budget - total;
 
   let cor = "#22c55e";
   if (saldo < budget * 0.2) cor = "#facc15";
@@ -42,7 +42,7 @@ function atualizarOrcamento() {
 
   info.style.color = cor;
   info.innerHTML = `
-    Gasto: <strong>${moeda(totalGasto)}</strong><br>
+    Gasto: <strong>${moeda(total)}</strong><br>
     Saldo disponível: <strong>${moeda(saldo)}</strong>
   `;
 }
@@ -95,7 +95,6 @@ function renderCatalog() {
   });
 }
 
-/* ====== DETECÇÃO AUTOMÁTICA DE PRODUTO POR PESO ====== */
 document.getElementById("productSelect")?.addEventListener("change", e => {
   const nome = e.target.value;
   if (!catalog[nome]) return;
@@ -104,9 +103,9 @@ document.getElementById("productSelect")?.addEventListener("change", e => {
   mostrarDicaUnidade(nome);
 });
 
-document.getElementById("productName")?.addEventListener("input", e => {
-  mostrarDicaUnidade(e.target.value);
-});
+document.getElementById("productName")?.addEventListener("input", e =>
+  mostrarDicaUnidade(e.target.value)
+);
 
 /* ================= ADICIONAR ITEM ================= */
 function addItem() {
@@ -196,6 +195,7 @@ function renderCart() {
         Rateio: ${moeda(i.rateio)}<br>
         Consumo diário/pessoa: ${i.consumoPessoaDia.toFixed(3)} kg<br>
         <strong>Total: ${moeda(i.total)}</strong><br>
+        <button onclick="editItem(${idx})">✏️ Editar</button>
         <button onclick="removeItem(${idx})">🗑 Excluir</button>
       </li>
     `;
@@ -204,26 +204,87 @@ function renderCart() {
   atualizarOrcamento();
 }
 
-/* ================= REMOVER ================= */
+/* ================= EDITAR / REMOVER ================= */
+function editItem(idx) {
+  const i = cart[idx];
+  const novoPreco = num(prompt("Novo preço unitário:", i.precoUnitario));
+  const novosPacotes = num(prompt("Nova quantidade:", i.pacotes));
+  if (novoPreco <= 0 || novosPacotes <= 0) return;
+
+  i.precoUnitario = novoPreco;
+  i.pacotes = novosPacotes;
+  i.subtotal = novoPreco * novosPacotes;
+  i.quantidadeKg = i.pesoPacote ? novosPacotes * i.pesoPacote : novosPacotes;
+
+  aplicarRateio();
+  renderCart();
+}
+
 function removeItem(idx) {
   cart.splice(idx, 1);
   aplicarRateio();
   renderCart();
 }
 
-/* ================= LIMPAR / NOVA COMPRA ================= */
-function limparCampos() {
-  ["productName","price","quantity","weightPerUnit"].forEach(id =>
-    document.getElementById(id).value = ""
-  );
+/* ================= FINALIZAR ================= */
+function finalizePurchase() {
+  if (!cart.length) return alert("Carrinho vazio");
+  const market = document.getElementById("market").value.trim();
+  if (!market) return alert("Informe o mercado");
+
+  aplicarRateio();
+
+  history.push({
+    data: new Date().toLocaleString(),
+    mercado: market,
+    transporte: num(document.getElementById("transportCost").value),
+    orcamento: num(document.getElementById("budget").value),
+    itens: JSON.parse(JSON.stringify(cart))
+  });
+
+  salvar();
+  atualizarHistorico();
+  gerarComparacao();
+  analisarMercados();
+  newPurchase();
 }
 
-function newPurchase() {
-  cart = [];
+/* ================= COPIAR COMPRA ANTERIOR ================= */
+function copyPreviousPurchase() {
+  if (!history.length) return alert("Nenhuma compra anterior");
+
+  const ultima = history.at(-1);
+  cart = JSON.parse(JSON.stringify(ultima.itens));
+
+  document.getElementById("transportCost").value = ultima.transporte || "";
+  document.getElementById("budget").value = ultima.orcamento || "";
+
   renderCart();
-  document.getElementById("market").value = "";
-  document.getElementById("transportCost").value = "";
-  atualizarOrcamento();
+}
+
+/* ================= HISTÓRICO / CUPOM ================= */
+function atualizarHistorico() {
+  const select = document.getElementById("historySelect");
+  select.innerHTML = `<option value="">Selecione</option>`;
+
+  history.forEach((h, i) => {
+    select.innerHTML += `
+      <option value="${i}">
+        ${h.data} - ${h.mercado}
+      </option>
+    `;
+  });
+}
+
+/* ================= VOZ ================= */
+let recognition;
+if ("webkitSpeechRecognition" in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = "pt-BR";
+}
+function startVoice() {
+  if (!recognition) return alert("Voz não suportada");
+  recognition.start();
 }
 
 /* ================= INIT ================= */
