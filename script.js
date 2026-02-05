@@ -21,32 +21,6 @@ function num(v) {
   return parseFloat(String(v).replace(",", ".")) || 0;
 }
 
-/* ================= ORÇAMENTO ================= */
-function atualizarOrcamento() {
-  const budgetInput = document.getElementById("budget");
-  const info = document.getElementById("budgetInfo");
-  if (!budgetInput || !info) return;
-
-  const orcamento = num(budgetInput.value);
-  if (!orcamento) {
-    info.innerHTML = "";
-    return;
-  }
-
-  const total = cart.reduce((s, i) => s + i.total, 0);
-  const saldo = orcamento - total;
-
-  let cor = "#22c55e";
-  if (saldo < orcamento * 0.2) cor = "#facc15";
-  if (saldo < 0) cor = "#ef4444";
-
-  info.style.color = cor;
-  info.innerHTML = `
-    Gasto: <strong>${moeda(total)}</strong><br>
-    Saldo: <strong>${moeda(saldo)}</strong>
-  `;
-}
-
 /* ================= PRODUTOS POR PESO ================= */
 const produtosPorPeso = [
   "arroz","feijão","feijao","açúcar","acucar",
@@ -59,7 +33,6 @@ function mostrarDicaUnidade(nomeProduto) {
   const hint = document.getElementById("unitHint");
   const wrapper = document.getElementById("weightPerUnitWrapper");
   const unitSelect = document.getElementById("unit");
-  if (!hint || !wrapper || !unitSelect) return;
 
   if (!nomeProduto) {
     hint.style.display = "none";
@@ -152,7 +125,6 @@ function addItem() {
   renderCart();
   renderCatalog();
   limparCampos();
-  atualizarOrcamento();
 }
 
 /* ================= RATEIO ================= */
@@ -166,7 +138,6 @@ function aplicarRateio() {
   });
 
   calcularConsumo();
-  atualizarOrcamento();
 }
 
 /* ================= CONSUMO ================= */
@@ -201,8 +172,6 @@ function renderCart() {
       </li>
     `;
   });
-
-  atualizarOrcamento();
 }
 
 /* ================= EDITAR / REMOVER ================= */
@@ -227,8 +196,166 @@ function removeItem(idx) {
   renderCart();
 }
 
+/* ================= FINALIZAR ================= */
+function finalizePurchase() {
+  if (!cart.length) return alert("Carrinho vazio");
+  const market = document.getElementById("market").value.trim();
+  if (!market) return alert("Informe o mercado");
+
+  aplicarRateio();
+
+  history.push({
+    data: new Date().toLocaleString(),
+    mercado: market,
+    transporte: num(document.getElementById("transportCost").value),
+    orcamento: num(document.getElementById("budget").value),
+    itens: JSON.parse(JSON.stringify(cart))
+  });
+
+  salvar();
+  atualizarHistorico();
+  gerarComparacao();
+  analisarMercados();
+  newPurchase();
+}
+
+/* ================= COPIAR COMPRA ANTERIOR ================= */
+function copyPreviousPurchase() {
+  if (!history.length) return alert("Nenhuma compra anterior");
+
+  const ultima = history.at(-1);
+  cart = JSON.parse(JSON.stringify(ultima.itens));
+
+  document.getElementById("transportCost").value = ultima.transporte || "";
+  document.getElementById("budget").value = ultima.orcamento || "";
+
+  renderCart();
+}
+
+/* ================= HISTÓRICO / CUPOM ================= */
+function atualizarHistorico() {
+  const select = document.getElementById("historySelect");
+  select.innerHTML = `<option value="">Selecione</option>`;
+
+  history.forEach((h, i) => {
+    select.innerHTML += `
+      <option value="${i}">
+        ${h.data} - ${h.mercado}
+      </option>
+    `;
+  });
+}
+
+function showReceipt() {
+  const idx = document.getElementById("historySelect").value;
+  const h = history[idx];
+  if (!h) return;
+
+  const div = document.getElementById("receipt");
+  let subtotalProdutos = 0;
+  let totalRateio = 0;
+
+  div.innerHTML = `
+    <h3>🧾 CUPOM FISCAL</h3>
+    <strong>Mercado:</strong> ${h.mercado}<br>
+    <strong>Data:</strong> ${h.data}
+    <hr>
+  `;
+
+  h.itens.forEach(i => {
+    subtotalProdutos += i.subtotal;
+    totalRateio += i.rateio;
+
+    div.innerHTML += `
+      <strong>${i.nome}</strong><br>
+      Quantidade: ${i.pacotes}<br>
+      Quantidade total: ${i.quantidadeKg.toFixed(2)} kg<br>
+      Unitário: ${moeda(i.precoUnitario)}<br>
+      Subtotal: ${moeda(i.subtotal)}<br>
+      Rateio: ${moeda(i.rateio)}<br>
+      Consumo diário/pessoa: ${i.consumoPessoaDia.toFixed(3)} kg
+      <hr>
+    `;
+  });
+
+  div.innerHTML += `
+    <strong>Subtotal produtos:</strong> ${moeda(subtotalProdutos)}<br>
+    <strong>Deslocamento:</strong> ${moeda(totalRateio)}<br>
+    <hr>
+    <h3>Total geral: ${moeda(subtotalProdutos + totalRateio)}</h3>
+  `;
+}
+
+/* ================= COMPARAÇÃO ================= */
+function gerarComparacao() {
+  const tbody = document.getElementById("compareTable");
+  if (!tbody || history.length < 2) return;
+
+  tbody.innerHTML = "";
+  const a = history.at(-1), b = history.at(-2);
+
+  a.itens.forEach(i => {
+    const ant = b.itens.find(x => x.nome === i.nome);
+    if (!ant) return;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${i.nome}</td>
+        <td>${moeda(ant.precoUnitario)}</td>
+        <td>${moeda(i.precoUnitario)}</td>
+        <td>${moeda(i.precoUnitario - ant.precoUnitario)}</td>
+      </tr>`;
+  });
+}
+
+/* ================= MELHOR MERCADO ================= */
+function analisarMercados() {
+  const div = document.getElementById("melhorMercado");
+  if (!div || history.length < 2) return;
+
+  const resumo = {};
+  history.forEach(c => {
+    const total = c.itens.reduce((s, i) => s + i.total, 0);
+    resumo[c.mercado] = resumo[c.mercado] || { total: 0, n: 0 };
+    resumo[c.mercado].total += total;
+    resumo[c.mercado].n++;
+  });
+
+  const melhor = Object.entries(resumo)
+    .map(([m, d]) => ({ m, media: d.total / d.n }))
+    .sort((a, b) => a.media - b.media)[0];
+
+  div.innerHTML = `🏆 ${melhor.m} – Média ${moeda(melhor.media)}`;
+}
+
+/* ================= LIMPAR / NOVA COMPRA ================= */
+function limparCampos() {
+  ["productName","price","quantity","weightPerUnit"].forEach(id =>
+    document.getElementById(id).value = ""
+  );
+}
+
+function newPurchase() {
+  cart = [];
+  renderCart();
+  document.getElementById("market").value = "";
+  document.getElementById("transportCost").value = "";
+}
+
+/* ================= VOZ ================= */
+let recognition;
+if ("webkitSpeechRecognition" in window) {
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = "pt-BR";
+}
+function startVoice() {
+  if (!recognition) return alert("Voz não suportada");
+  recognition.start();
+}
+
 /* ================= INIT ================= */
 renderCatalog();
 atualizarHistorico();
 analisarMercados();
-atualizarOrcamento();
+
+
