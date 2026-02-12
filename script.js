@@ -1,225 +1,131 @@
-document.addEventListener("DOMContentLoaded", function () {
+let modo = "esperando";
+let orcamento = 0;
+let deslocamento = 0;
+let carrinho = [];
 
-/* ================= ESTADO ================= */
-let catalog = JSON.parse(localStorage.getItem("catalog")) || {};
-let cart = [];
+const statusEl = document.getElementById("status");
+const listaEl = document.getElementById("lista");
+const totalEl = document.getElementById("total");
+const orcamentoEl = document.getElementById("orcamento");
+const deslocamentoEl = document.getElementById("deslocamento");
 
-/* ================= UTIL ================= */
-function salvar() {
-  localStorage.setItem("catalog", JSON.stringify(catalog));
-}
+function atualizarTela() {
+  listaEl.innerHTML = "";
+  let total = 0;
 
-function moeda(v) {
-  return Number(v || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
+  carrinho.forEach(item => {
+    let li = document.createElement("li");
+    li.textContent = `${item.nome} - ${item.quantidade}x - R$ ${item.preco.toFixed(2)}`;
+    listaEl.appendChild(li);
+    total += item.preco * item.quantidade;
   });
+
+  total += deslocamento;
+  totalEl.textContent = "R$ " + total.toFixed(2);
+  orcamentoEl.textContent = "R$ " + orcamento.toFixed(2);
+  deslocamentoEl.textContent = "R$ " + deslocamento.toFixed(2);
 }
 
-function num(v) {
-  if (!v) return 0;
-  return parseFloat(String(v).replace(",", ".")) || 0;
-}
+function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-/* ================= PRODUTOS POR PESO ================= */
-const produtosPorPeso = [
-  "arroz","feijão","feijao","açúcar","acucar",
-  "farinha","macarrão","macarrao",
-  "carne","frango","peixe","sal"
-];
-
-/* ================= CONSUMO MÉDIO ================= */
-const consumoMedio = {
-  arroz: 0.1,
-  feijão: 0.12,
-  feijao: 0.12,
-  carne: 0.18,
-  leite: 0.2
-};
-
-/* ================= ADICIONAR ITEM ================= */
-window.addItem = function () {
-
-  const nome = document.getElementById("productName").value.trim();
-  const preco = num(document.getElementById("price").value);
-  const pacotes = num(document.getElementById("quantity").value);
-  const pesoPacote = num(document.getElementById("weightPerUnit").value);
-  const tipoPreco = document.getElementById("priceType").value;
-
-  if (!nome || preco <= 0 || pacotes <= 0) {
-    alert("Preencha corretamente os campos.");
+  if (!SpeechRecognition) {
+    alert("Seu navegador não suporta reconhecimento de voz.");
     return;
   }
 
-  const precisaPeso = produtosPorPeso.some(p =>
-    nome.toLowerCase().includes(p)
-  );
-
-  const quantidadeKg = precisaPeso ? pacotes * pesoPacote : pacotes;
-
-  const precoUnitario =
-    tipoPreco === "total" ? preco / pacotes : preco;
-
-  cart.push({
-    nome,
-    pacotes,
-    quantidadeKg,
-    subtotal: precoUnitario * pacotes,
-    rateio: 0,
-    total: 0
-  });
-
-  catalog[nome] = { price: precoUnitario };
-
-  salvar();
-  aplicarRateio();
-  renderCart();
-  limparCampos();
-};
-
-/* ================= RATEIO ================= */
-function aplicarRateio() {
-  const custo = num(document.getElementById("transportCost").value);
-  const rateio = cart.length ? custo / cart.length : 0;
-
-  cart.forEach(i => {
-    i.rateio = rateio;
-    i.total = i.subtotal + rateio;
-  });
-
-  calcularDuracaoEstoque();
-  verificarOrcamento();
-}
-
-/* ================= DURAÇÃO ================= */
-function calcularDuracaoEstoque() {
-
-  const pessoas = num(document.getElementById("familySize").value);
-  const div = document.getElementById("duracaoEstoque");
-
-  if (!pessoas || !div) {
-    div.innerHTML = "";
-    return;
-  }
-
-  let menorDuracao = Infinity;
-  let produtoCritico = "";
-
-  div.innerHTML = "<h3>📦 Duração do abastecimento</h3>";
-
-  cart.forEach(i => {
-
-    const chave = Object.keys(consumoMedio)
-      .find(k => i.nome.toLowerCase().includes(k));
-
-    if (!chave) return;
-
-    const consumoCasaDia = consumoMedio[chave] * pessoas;
-    if (consumoCasaDia === 0) return;
-
-    const duracao = i.quantidadeKg / consumoCasaDia;
-
-    if (duracao < menorDuracao) {
-      menorDuracao = duracao;
-      produtoCritico = i.nome;
-    }
-
-    div.innerHTML += `${i.nome}: ${duracao.toFixed(1)} dias<br>`;
-  });
-
-  if (produtoCritico) {
-    div.innerHTML += `
-      <hr>
-      ⚠ Produto que acaba primeiro:
-      <strong>${produtoCritico} (${menorDuracao.toFixed(1)} dias)</strong>
-    `;
-  }
-}
-
-/* ================= ORÇAMENTO ================= */
-function verificarOrcamento() {
-
-  const budget = num(document.getElementById("budget").value);
-  const info = document.getElementById("budgetInfo");
-
-  if (!budget) {
-    info.innerHTML = "";
-    return;
-  }
-
-  const totalFinal = cart.reduce((s, i) => s + i.total, 0);
-
-  if (totalFinal > budget) {
-    info.innerHTML =
-      `⚠ Você ultrapassou em ${moeda(totalFinal - budget)}`;
-    info.style.color = "red";
-  } else {
-    info.innerHTML =
-      `✅ Restam ${moeda(budget - totalFinal)}`;
-    info.style.color = "lightgreen";
-  }
-}
-
-/* ================= CARRINHO ================= */
-function renderCart() {
-  const ul = document.getElementById("shoppingList");
-  ul.innerHTML = "";
-
-  cart.forEach((i, idx) => {
-    ul.innerHTML += `
-      <li class="item-card">
-        <strong>${i.nome}</strong><br>
-        Quantidade: ${i.pacotes}<br>
-        Total: ${moeda(i.total)}<br>
-        <button onclick="removeItem(${idx})">Excluir</button>
-      </li>
-    `;
-  });
-}
-
-/* ================= REMOVER ================= */
-window.removeItem = function (idx) {
-  cart.splice(idx, 1);
-  aplicarRateio();
-  renderCart();
-};
-
-/* ================= LIMPAR ================= */
-function limparCampos() {
-  ["productName","price","quantity","weightPerUnit"]
-  .forEach(id => document.getElementById(id).value = "");
-}
-
-/* ================= EVENTOS ================= */
-document.getElementById("budget")
-  .addEventListener("input", verificarOrcamento);
-
-document.getElementById("familySize")
-  .addEventListener("input", aplicarRateio);
-
-document.getElementById("transportCost")
-  .addEventListener("input", aplicarRateio);
-
-/* ================= VOZ ================= */
-let recognition;
-
-if ("webkitSpeechRecognition" in window) {
-  recognition = new webkitSpeechRecognition();
+  const recognition = new SpeechRecognition();
   recognition.lang = "pt-BR";
+  recognition.start();
 
-  recognition.onresult = function (event) {
+  statusEl.textContent = "Ouvindo... 🎤";
+
+  recognition.onresult = function(event) {
     const texto = event.results[0][0].transcript.toLowerCase();
-    document.getElementById("productName").value =
-      texto.split(" ")[0];
+    statusEl.textContent = "Você disse: " + texto;
+    interpretarComando(texto);
+  };
+
+  recognition.onerror = function() {
+    statusEl.textContent = "Erro ao ouvir.";
   };
 }
 
-window.startVoice = function () {
-  if (!recognition) {
-    alert("Use Google Chrome.");
+function interpretarComando(texto) {
+
+  if (texto.includes("iniciar compra")) {
+    modo = "compra_iniciada";
+    carrinho = [];
+    orcamento = 0;
+    deslocamento = 0;
+    atualizarTela();
+    statusEl.textContent = "Compra iniciada.";
     return;
   }
-  recognition.start();
-};
 
-});
+  if (texto.includes("orçamento")) {
+    let valor = extrairNumero(texto);
+    if (valor) {
+      orcamento = valor;
+      atualizarTela();
+    }
+    return;
+  }
+
+  if (texto.includes("deslocamento")) {
+    let valor = extrairNumero(texto);
+    if (valor) {
+      deslocamento = valor;
+      atualizarTela();
+    }
+    return;
+  }
+
+  if (texto.includes("encher carrinho")) {
+    modo = "enchendo";
+    statusEl.textContent = "Modo carrinho ativado.";
+    return;
+  }
+
+  if (texto.includes("finalizar compra")) {
+    modo = "esperando";
+    statusEl.textContent = "Compra finalizada.";
+    return;
+  }
+
+  if (modo === "enchendo") {
+    adicionarProdutoPorVoz(texto);
+  }
+}
+
+function extrairNumero(texto) {
+  let match = texto.match(/(\d+[.,]?\d*)/);
+  if (match) {
+    return parseFloat(match[1].replace(",", "."));
+  }
+  return 0;
+}
+
+function adicionarProdutoPorVoz(texto) {
+
+  let precoMatch = texto.match(/preço\s*(\d+[.,]?\d*)/);
+  let qtdMatch = texto.match(/(\d+)\s*(pacote|pacotes|unidade|unidades|quilo|quilos|kg)/);
+
+  let preco = precoMatch ? parseFloat(precoMatch[1].replace(",", ".")) : 0;
+  let quantidade = qtdMatch ? parseInt(qtdMatch[1]) : 1;
+
+  let nome = texto.split("preço")[0].trim();
+
+  if (!preco) {
+    statusEl.textContent = "Preço não identificado.";
+    return;
+  }
+
+  carrinho.push({
+    nome: nome,
+    preco: preco,
+    quantidade: quantidade
+  });
+
+  atualizarTela();
+}
