@@ -9,24 +9,9 @@ const totalEl = document.getElementById("total");
 const orcamentoEl = document.getElementById("orcamento");
 const deslocamentoEl = document.getElementById("deslocamento");
 
-function atualizarTela() {
-  listaEl.innerHTML = "";
-  let total = 0;
+let recognition;
 
-  carrinho.forEach(item => {
-    let li = document.createElement("li");
-    li.textContent = `${item.nome} - ${item.quantidade}x - R$ ${item.preco.toFixed(2)}`;
-    listaEl.appendChild(li);
-    total += item.preco * item.quantidade;
-  });
-
-  total += deslocamento;
-  totalEl.textContent = "R$ " + total.toFixed(2);
-  orcamentoEl.textContent = "R$ " + orcamento.toFixed(2);
-  deslocamentoEl.textContent = "R$ " + deslocamento.toFixed(2);
-}
-
-function startVoice() {
+function iniciarReconhecimento() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
@@ -34,21 +19,32 @@ function startVoice() {
     return;
   }
 
-  const recognition = new SpeechRecognition();
+  recognition = new SpeechRecognition();
   recognition.lang = "pt-BR";
-  recognition.start();
-
-  statusEl.textContent = "Ouvindo... 🎤";
+  recognition.continuous = true; // 🔥 agora contínuo
+  recognition.interimResults = false;
 
   recognition.onresult = function(event) {
-    const texto = event.results[0][0].transcript.toLowerCase();
+    const texto = event.results[event.results.length - 1][0].transcript.toLowerCase();
+    console.log("Reconhecido:", texto);
     statusEl.textContent = "Você disse: " + texto;
     interpretarComando(texto);
   };
 
-  recognition.onerror = function() {
-    statusEl.textContent = "Erro ao ouvir.";
+  recognition.onerror = function(e) {
+    console.error(e);
+    statusEl.textContent = "Erro no reconhecimento.";
   };
+
+  recognition.start();
+}
+
+function startVoice() {
+  if (!recognition) {
+    iniciarReconhecimento();
+  } else {
+    recognition.start();
+  }
 }
 
 function interpretarComando(texto) {
@@ -65,7 +61,7 @@ function interpretarComando(texto) {
 
   if (texto.includes("orçamento")) {
     let valor = extrairNumero(texto);
-    if (valor) {
+    if (valor > 0) {
       orcamento = valor;
       atualizarTela();
     }
@@ -74,7 +70,7 @@ function interpretarComando(texto) {
 
   if (texto.includes("deslocamento")) {
     let valor = extrairNumero(texto);
-    if (valor) {
+    if (valor > 0) {
       deslocamento = valor;
       atualizarTela();
     }
@@ -109,15 +105,15 @@ function extrairNumero(texto) {
 function adicionarProdutoPorVoz(texto) {
 
   let precoMatch = texto.match(/preço\s*(\d+[.,]?\d*)/);
-  let qtdMatch = texto.match(/(\d+)\s*(pacote|pacotes|unidade|unidades|quilo|quilos|kg)/);
+  let qtdMatch = texto.match(/(\d+)\s*(pacote|pacotes|quilo|quilos|kg|unidade|unidades)/);
 
   let preco = precoMatch ? parseFloat(precoMatch[1].replace(",", ".")) : 0;
   let quantidade = qtdMatch ? parseInt(qtdMatch[1]) : 1;
 
   let nome = texto.split("preço")[0].trim();
 
-  if (!preco) {
-    statusEl.textContent = "Preço não identificado.";
+  if (preco === 0) {
+    statusEl.textContent = "Não consegui identificar o preço.";
     return;
   }
 
@@ -128,4 +124,22 @@ function adicionarProdutoPorVoz(texto) {
   });
 
   atualizarTela();
+}
+
+function atualizarTela() {
+  listaEl.innerHTML = "";
+  let total = 0;
+
+  carrinho.forEach(item => {
+    let li = document.createElement("li");
+    li.textContent = `${item.nome} - ${item.quantidade}x - R$ ${item.preco.toFixed(2)}`;
+    listaEl.appendChild(li);
+    total += item.preco * item.quantidade;
+  });
+
+  total += deslocamento;
+
+  totalEl.textContent = "R$ " + total.toFixed(2);
+  orcamentoEl.textContent = "R$ " + orcamento.toFixed(2);
+  deslocamentoEl.textContent = "R$ " + deslocamento.toFixed(2);
 }
