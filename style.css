@@ -1,17 +1,36 @@
+/* ================= ROOT (PADRÃO DE DESIGN) ================= */
+:root {
+  --bg-dark: #0d0d0d;
+  --bg-card-1: #1e1b2f;
+  --bg-card-2: #2d2540;
+  --bg-item: #3a2c5d;
+  --primary: #8e2de2;
+  --primary-dark: #4a00e0;
+  --secondary: #7b2cbf;
+  --text-light: #f5f5f5;
+  --text-muted: #d9a7ff;
+  --border-glow: rgba(138, 43, 226, 0.6);
+  --shadow-strong: 0 15px 40px rgba(0, 0, 0, 0.35);
+}
+
 /* ================= RESET ================= */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
 }
 
-/* ================= FUNDO ================= */
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
 body {
-  background: linear-gradient(145deg, #0d0d0d, #1c1c1c);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: linear-gradient(145deg, var(--bg-dark), #1c1c1c);
   min-height: 100vh;
   padding: 16px;
-  color: #f5f5f5;
+  color: var(--text-light);
 }
 
 /* ================= TÍTULO ================= */
@@ -20,42 +39,51 @@ h1 {
   color: #e0c3fc;
   margin-bottom: 24px;
   font-size: 2rem;
+  font-weight: 700;
   text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
 }
 
 /* ================= CARDS ================= */
 .card {
-  background: linear-gradient(145deg, #1e1b2f, #2d2540);
+  background: linear-gradient(145deg, var(--bg-card-1), var(--bg-card-2));
   border-radius: 20px;
   padding: 20px;
   margin-bottom: 22px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.35);
-  color: #fff;
+  box-shadow: var(--shadow-strong);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45);
 }
 
 /* ================= INPUTS ================= */
 input,
-select {
+select,
+textarea {
   width: 100%;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(138, 43, 226, 0.6);
+  border: 1px solid var(--border-glow);
   margin-bottom: 14px;
   font-size: 15px;
   background-color: #2a243f;
   color: #fff;
+  transition: all 0.2s ease;
 }
 
 input:focus,
-select:focus {
-  border-color: #d9a7ff;
+select:focus,
+textarea:focus {
+  border-color: var(--text-muted);
   box-shadow: 0 0 8px rgba(217, 167, 255, 0.5);
   outline: none;
 }
 
 /* ================= BOTÕES ================= */
 button {
-  background: linear-gradient(135deg, #8e2de2, #4a00e0);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #fff;
   border: none;
   padding: 16px;
@@ -64,10 +92,20 @@ button {
   font-weight: 700;
   cursor: pointer;
   width: 100%;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+button:hover {
+  transform: scale(1.02);
+}
+
+button:active {
+  transform: scale(0.98);
+  opacity: 0.85;
 }
 
 button.secondary {
-  background: linear-gradient(135deg, #5a189a, #7b2cbf);
+  background: linear-gradient(135deg, #5a189a, var(--secondary));
 }
 
 .card button + button {
@@ -82,11 +120,16 @@ button.secondary {
 
 /* ================= ITEM ================= */
 .item-card {
-  background: #3a2c5d;
+  background: var(--bg-item);
   border-radius: 18px;
   padding: 16px;
   margin-bottom: 16px;
   font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.item-card:hover {
+  background: #4b3a73;
 }
 
 /* ================= ABAS ================= */
@@ -102,23 +145,30 @@ button.secondary {
   border-radius: 16px;
   font-size: 14px;
   font-weight: 700;
-  background: linear-gradient(145deg, #2d2540, #1e1b2f);
-  color: #d9a7ff;
-  border: 1px solid rgba(138, 43, 226, 0.5);
+  background: linear-gradient(145deg, var(--bg-card-2), var(--bg-card-1));
+  color: var(--text-muted);
+  border: 1px solid var(--border-glow);
 }
 
 .tabs button.active {
-  background: linear-gradient(135deg, #8e2de2, #4a00e0);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #fff;
+  border: none;
 }
 
 /* ================= CONTEÚDO DAS ABAS ================= */
 .tab {
   display: none;
+  animation: fadeIn 0.2s ease-in;
 }
 
 .tab.active {
   display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ================= CUPOM FISCAL ================= */
@@ -136,6 +186,11 @@ button.secondary {
 
 /* ================= RESPONSIVO ================= */
 @media (max-width: 480px) {
+
+  body {
+    padding: 12px;
+  }
+
   h1 {
     font-size: 1.6rem;
   }
@@ -148,4 +203,14 @@ button.secondary {
   .item-card {
     font-size: 13px;
   }
+
+  .card {
+    padding: 16px;
+  }
+}
+
+/* ================= PERFORMANCE TOUCH MOBILE ================= */
+button,
+input {
+  touch-action: manipulation;
 }
