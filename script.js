@@ -1,23 +1,23 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_ITENS = "itens";
 const STORE_COMANDOS = "comandos";
 
 let db;
 
-/* ================= INICIALIZAÇÃO ================= */
+/* ================= INIT DB ================= */
 
 function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject("Erro ao abrir banco");
+    request.onerror = () => reject();
 
     request.onsuccess = () => {
       db = request.result;
-      resolve(db);
+      resolve();
     };
 
     request.onupgradeneeded = (event) => {
@@ -39,67 +39,66 @@ function initDB() {
   });
 }
 
-/* ================= IA - COMANDOS ================= */
+/* ================= VOZ FALA (RESPOSTA) ================= */
+
+function falar(texto) {
+  const synth = window.speechSynthesis;
+  const utterance = new SpeechSynthesisUtterance(texto);
+  utterance.lang = "pt-BR";
+  synth.speak(utterance);
+}
+
+/* ================= IA COMANDOS ================= */
 
 async function salvarComando(palavra) {
   const tx = db.transaction(STORE_COMANDOS, "readwrite");
-  const store = tx.objectStore(STORE_COMANDOS);
-  store.put({ palavra });
+  tx.objectStore(STORE_COMANDOS).put({ palavra });
 }
 
 async function listarComandos() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const tx = db.transaction(STORE_COMANDOS, "readonly");
-    const store = tx.objectStore(STORE_COMANDOS);
-    const request = store.getAll();
+    const request = tx.objectStore(STORE_COMANDOS).getAll();
 
     request.onsuccess = () => {
-      const palavras = request.result.map(c => c.palavra);
-      resolve(palavras);
+      resolve(request.result.map(c => c.palavra));
     };
-
-    request.onerror = () => reject([]);
   });
 }
 
-/* ================= CRUD ITENS ================= */
+/* ================= CRUD ================= */
 
-function addItem(nome, quantidade = 1, preco = 0) {
-  return new Promise((resolve, reject) => {
+function addItem(nome, quantidade, preco) {
+  return new Promise((resolve) => {
     const tx = db.transaction(STORE_ITENS, "readwrite");
-    const store = tx.objectStore(STORE_ITENS);
-
-    const request = store.add({
+    tx.objectStore(STORE_ITENS).add({
       nome,
       quantidade,
-      preco,
-      criadoEm: new Date()
-    });
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject();
+      preco
+    }).onsuccess = resolve;
   });
 }
 
 function getItems() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const tx = db.transaction(STORE_ITENS, "readonly");
-    const store = tx.objectStore(STORE_ITENS);
-    const request = store.getAll();
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject([]);
+    tx.objectStore(STORE_ITENS).getAll().onsuccess = e => {
+      resolve(e.target.result);
+    };
   });
 }
 
 function deleteItem(id) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const tx = db.transaction(STORE_ITENS, "readwrite");
-    const store = tx.objectStore(STORE_ITENS);
-    const request = store.delete(id);
+    tx.objectStore(STORE_ITENS).delete(id).onsuccess = resolve;
+  });
+}
 
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject();
+function limparLista() {
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    tx.objectStore(STORE_ITENS).clear().onsuccess = resolve;
   });
 }
 
@@ -136,16 +135,15 @@ async function remover(id) {
   renderList();
 }
 
-/* ================= VOZ ================= */
+/* ================= RECONHECIMENTO ================= */
 
 function startVoice() {
   const status = document.getElementById("status");
-
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    status.innerText = "Reconhecimento não suportado.";
+    status.innerText = "Não suportado.";
     return;
   }
 
@@ -166,21 +164,47 @@ function startVoice() {
   recognition.start();
 }
 
-/* ================= IA ADAPTATIVA ================= */
+/* ================= IA PRINCIPAL ================= */
 
 async function interpretarComando(frase) {
   frase = frase.toLowerCase().trim();
-
   const palavras = frase.split(" ");
   const verbo = palavras[0];
 
   const comandosAprendidos = await listarComandos();
-  const comandosPadrao = ["adicionar", "colocar", "incluir"];
 
-  const todosComandos = [...comandosPadrao, ...comandosAprendidos];
+  const adicionarCmd = ["adicionar", "colocar", "incluir", ...comandosAprendidos];
+  const removerCmd = ["remover", "tirar", "excluir"];
+  const limparCmd = ["limpar", "zerar"];
 
-  if (!todosComandos.includes(verbo)) {
-    // Aprende automaticamente novo verbo
+  /* ===== LIMPAR ===== */
+  if (limparCmd.includes(verbo)) {
+    await limparLista();
+    renderList();
+    falar("Lista limpa com sucesso.");
+    return;
+  }
+
+  /* ===== REMOVER ===== */
+  if (removerCmd.includes(verbo)) {
+    palavras.shift();
+    const nomeRemover = palavras.join(" ");
+
+    const itens = await getItems();
+    const item = itens.find(i => i.nome.includes(nomeRemover));
+
+    if (item) {
+      await deleteItem(item.id);
+      renderList();
+      falar(nomeRemover + " removido.");
+    } else {
+      falar("Item não encontrado.");
+    }
+    return;
+  }
+
+  /* ===== ADICIONAR ===== */
+  if (!adicionarCmd.includes(verbo)) {
     if (palavras.length >= 2) {
       await salvarComando(verbo);
     } else {
@@ -188,7 +212,6 @@ async function interpretarComando(frase) {
     }
   }
 
-  // Remove verbo
   palavras.shift();
 
   let quantidade = 1;
@@ -213,6 +236,7 @@ async function interpretarComando(frase) {
 
   await addItem(nome, quantidade, preco);
   renderList();
+  falar(nome + " adicionado com sucesso.");
 }
 
 /* ================= START ================= */
