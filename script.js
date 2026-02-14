@@ -1,7 +1,7 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_ITENS = "itens";
 const STORE_COMANDOS = "comandos";
 
@@ -39,7 +39,7 @@ function initDB() {
   });
 }
 
-/* ================= VOZ FALA (RESPOSTA) ================= */
+/* ================= FALAR ================= */
 
 function falar(texto) {
   const synth = window.speechSynthesis;
@@ -48,57 +48,45 @@ function falar(texto) {
   synth.speak(utterance);
 }
 
-/* ================= IA COMANDOS ================= */
-
-async function salvarComando(palavra) {
-  const tx = db.transaction(STORE_COMANDOS, "readwrite");
-  tx.objectStore(STORE_COMANDOS).put({ palavra });
-}
-
-async function listarComandos() {
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE_COMANDOS, "readonly");
-    const request = tx.objectStore(STORE_COMANDOS).getAll();
-
-    request.onsuccess = () => {
-      resolve(request.result.map(c => c.palavra));
-    };
-  });
-}
-
 /* ================= CRUD ================= */
 
 function addItem(nome, quantidade, preco) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const tx = db.transaction(STORE_ITENS, "readwrite");
-    tx.objectStore(STORE_ITENS).add({
-      nome,
-      quantidade,
-      preco
-    }).onsuccess = resolve;
+    tx.objectStore(STORE_ITENS).add({ nome, quantidade, preco })
+      .onsuccess = resolve;
   });
 }
 
 function getItems() {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const tx = db.transaction(STORE_ITENS, "readonly");
-    tx.objectStore(STORE_ITENS).getAll().onsuccess = e => {
-      resolve(e.target.result);
-    };
+    tx.objectStore(STORE_ITENS).getAll()
+      .onsuccess = e => resolve(e.target.result || []);
+  });
+}
+
+function updateItem(item) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    tx.objectStore(STORE_ITENS).put(item)
+      .onsuccess = resolve;
   });
 }
 
 function deleteItem(id) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const tx = db.transaction(STORE_ITENS, "readwrite");
-    tx.objectStore(STORE_ITENS).delete(id).onsuccess = resolve;
+    tx.objectStore(STORE_ITENS).delete(id)
+      .onsuccess = resolve;
   });
 }
 
 function limparLista() {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const tx = db.transaction(STORE_ITENS, "readwrite");
-    tx.objectStore(STORE_ITENS).clear().onsuccess = resolve;
+    tx.objectStore(STORE_ITENS).clear()
+      .onsuccess = resolve;
   });
 }
 
@@ -114,14 +102,18 @@ async function renderList() {
   const itens = await getItems();
 
   itens.forEach(item => {
-    total += item.quantidade * item.preco;
+
+    if (!item.nome) return; // protege contra lixo
+
+    total += (item.quantidade || 0) * (item.preco || 0);
 
     const li = document.createElement("li");
     li.className = "item-card";
     li.innerHTML = `
       <strong>${item.nome}</strong><br>
       Qtd: ${item.quantidade}<br>
-      Preço: R$ ${item.preco.toFixed(2)}<br>
+      Preço: R$ ${Number(item.preco).toFixed(2)}<br>
+      <button onclick="editar(${item.id})">Editar</button>
       <button onclick="remover(${item.id})" class="secondary">Remover</button>
     `;
     lista.appendChild(li);
@@ -130,12 +122,34 @@ async function renderList() {
   totalElement.innerText = "R$ " + total.toFixed(2);
 }
 
+/* ================= EDITAR ================= */
+
+async function editar(id) {
+  const itens = await getItems();
+  const item = itens.find(i => i.id === id);
+
+  if (!item) return;
+
+  const novoNome = prompt("Novo nome:", item.nome);
+  const novaQtd = prompt("Nova quantidade:", item.quantidade);
+  const novoPreco = prompt("Novo preço:", item.preco);
+
+  item.nome = novoNome || item.nome;
+  item.quantidade = parseInt(novaQtd) || item.quantidade;
+  item.preco = parseFloat(novoPreco) || item.preco;
+
+  await updateItem(item);
+  renderList();
+}
+
+/* ================= REMOVER ================= */
+
 async function remover(id) {
   await deleteItem(id);
   renderList();
 }
 
-/* ================= RECONHECIMENTO ================= */
+/* ================= VOZ ================= */
 
 function startVoice() {
   const status = document.getElementById("status");
@@ -150,53 +164,65 @@ function startVoice() {
   const recognition = new SpeechRecognition();
   recognition.lang = "pt-BR";
 
-  recognition.onstart = () => {
-    status.innerText = "Ouvindo...";
-  };
-
   recognition.onresult = async (event) => {
     const frase = event.results[0][0].transcript;
     status.innerText = "Você disse: " + frase;
-
     await interpretarComando(frase);
   };
 
   recognition.start();
 }
 
-/* ================= IA PRINCIPAL ================= */
+/* ================= IA ================= */
 
 async function interpretarComando(frase) {
   frase = frase.toLowerCase().trim();
   const palavras = frase.split(" ");
   const verbo = palavras[0];
 
-  const comandosAprendidos = await listarComandos();
-
-  const adicionarCmd = ["adicionar", "colocar", "incluir", ...comandosAprendidos];
-  const removerCmd = ["remover", "tirar", "excluir"];
-  const limparCmd = ["limpar", "zerar"];
-
   /* ===== LIMPAR ===== */
-  if (limparCmd.includes(verbo)) {
+  if (verbo === "limpar" || verbo === "zerar") {
     await limparLista();
+    await renderList();
+    falar("Lista limpa completamente.");
+    return;
+  }
+
+  /* ===== EDITAR ===== */
+  if (verbo === "editar" || verbo === "atualizar") {
+    palavras.shift();
+    const nomeBusca = palavras[0];
+
+    const itens = await getItems();
+    const item = itens.find(i => i.nome.includes(nomeBusca));
+
+    if (!item) {
+      falar("Item não encontrado.");
+      return;
+    }
+
+    const numeros = palavras.filter(p => !isNaN(p));
+    if (numeros.length >= 1) item.quantidade = parseInt(numeros[0]);
+    if (numeros.length >= 2) item.preco = parseFloat(numeros[1]);
+
+    await updateItem(item);
     renderList();
-    falar("Lista limpa com sucesso.");
+    falar("Item atualizado.");
     return;
   }
 
   /* ===== REMOVER ===== */
-  if (removerCmd.includes(verbo)) {
+  if (verbo === "remover" || verbo === "tirar") {
     palavras.shift();
-    const nomeRemover = palavras.join(" ");
+    const nomeBusca = palavras.join(" ");
 
     const itens = await getItems();
-    const item = itens.find(i => i.nome.includes(nomeRemover));
+    const item = itens.find(i => i.nome.includes(nomeBusca));
 
     if (item) {
       await deleteItem(item.id);
       renderList();
-      falar(nomeRemover + " removido.");
+      falar("Item removido.");
     } else {
       falar("Item não encontrado.");
     }
@@ -204,14 +230,6 @@ async function interpretarComando(frase) {
   }
 
   /* ===== ADICIONAR ===== */
-  if (!adicionarCmd.includes(verbo)) {
-    if (palavras.length >= 2) {
-      await salvarComando(verbo);
-    } else {
-      return;
-    }
-  }
-
   palavras.shift();
 
   let quantidade = 1;
@@ -221,13 +239,10 @@ async function interpretarComando(frase) {
     !isNaN(p.replace(",", "."))
   );
 
-  if (numeros.length === 1) {
-    preco = parseFloat(numeros[0].replace(",", "."));
-  }
-
+  if (numeros.length === 1) preco = parseFloat(numeros[0]);
   if (numeros.length >= 2) {
     quantidade = parseInt(numeros[0]);
-    preco = parseFloat(numeros[1].replace(",", "."));
+    preco = parseFloat(numeros[1]);
   }
 
   const nome = palavras
@@ -236,7 +251,7 @@ async function interpretarComando(frase) {
 
   await addItem(nome, quantidade, preco);
   renderList();
-  falar(nome + " adicionado com sucesso.");
+  falar("Item adicionado.");
 }
 
 /* ================= START ================= */
