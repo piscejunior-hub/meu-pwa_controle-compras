@@ -1,8 +1,9 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 1;
-const STORE_NAME = "itens";
+const DB_VERSION = 2;
+const STORE_ITENS = "itens";
+const STORE_COMANDOS = "comandos";
 
 let db;
 
@@ -22,66 +23,87 @@ function initDB() {
     request.onupgradeneeded = (event) => {
       db = event.target.result;
 
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, {
+      if (!db.objectStoreNames.contains(STORE_ITENS)) {
+        db.createObjectStore(STORE_ITENS, {
           keyPath: "id",
           autoIncrement: true
         });
+      }
 
-        store.createIndex("nome", "nome", { unique: false });
+      if (!db.objectStoreNames.contains(STORE_COMANDOS)) {
+        db.createObjectStore(STORE_COMANDOS, {
+          keyPath: "palavra"
+        });
       }
     };
   });
 }
 
-/* ================= ADICIONAR ITEM ================= */
+/* ================= IA - COMANDOS ================= */
+
+async function salvarComando(palavra) {
+  const tx = db.transaction(STORE_COMANDOS, "readwrite");
+  const store = tx.objectStore(STORE_COMANDOS);
+  store.put({ palavra });
+}
+
+async function listarComandos() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_COMANDOS, "readonly");
+    const store = tx.objectStore(STORE_COMANDOS);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      const palavras = request.result.map(c => c.palavra);
+      resolve(palavras);
+    };
+
+    request.onerror = () => reject([]);
+  });
+}
+
+/* ================= CRUD ITENS ================= */
 
 function addItem(nome, quantidade = 1, preco = 0) {
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    const store = tx.objectStore(STORE_ITENS);
 
-    const item = {
+    const request = store.add({
       nome,
       quantidade,
       preco,
       criadoEm: new Date()
-    };
-
-    const request = store.add(item);
+    });
 
     request.onsuccess = () => resolve();
-    request.onerror = () => reject("Erro ao adicionar item");
+    request.onerror = () => reject();
   });
 }
-
-/* ================= LISTAR ITENS ================= */
 
 function getItems() {
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, "readonly");
-    const store = transaction.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_ITENS, "readonly");
+    const store = tx.objectStore(STORE_ITENS);
     const request = store.getAll();
 
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject("Erro ao buscar itens");
+    request.onerror = () => reject([]);
   });
 }
-
-/* ================= REMOVER ITEM ================= */
 
 function deleteItem(id) {
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    const store = tx.objectStore(STORE_ITENS);
     const request = store.delete(id);
 
     request.onsuccess = () => resolve();
-    request.onerror = () => reject("Erro ao remover item");
+    request.onerror = () => reject();
   });
 }
 
-/* ================= RENDERIZAR LISTA ================= */
+/* ================= RENDER ================= */
 
 async function renderList() {
   const lista = document.getElementById("shoppingList");
@@ -103,14 +125,11 @@ async function renderList() {
       Preço: R$ ${item.preco.toFixed(2)}<br>
       <button onclick="remover(${item.id})" class="secondary">Remover</button>
     `;
-
     lista.appendChild(li);
   });
 
   totalElement.innerText = "R$ " + total.toFixed(2);
 }
-
-/* ================= REMOVER ================= */
 
 async function remover(id) {
   await deleteItem(id);
@@ -126,14 +145,12 @@ function startVoice() {
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    status.innerText = "Reconhecimento de voz não suportado.";
+    status.innerText = "Reconhecimento não suportado.";
     return;
   }
 
   const recognition = new SpeechRecognition();
   recognition.lang = "pt-BR";
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
 
   recognition.onstart = () => {
     status.innerText = "Ouvindo...";
@@ -146,34 +163,36 @@ function startVoice() {
     await interpretarComando(frase);
   };
 
-  recognition.onerror = () => {
-    status.innerText = "Erro no reconhecimento.";
-  };
-
   recognition.start();
 }
 
-/* ================= INTERPRETAR COMANDO INTELIGENTE ================= */
+/* ================= IA ADAPTATIVA ================= */
 
 async function interpretarComando(frase) {
-  frase = frase.toLowerCase();
-
-  if (!frase.includes("adicionar") &&
-      !frase.includes("colocar") &&
-      !frase.includes("incluir")) {
-    return;
-  }
-
-  // Limpeza da frase
-  frase = frase
-    .replace(/adicionar|colocar|incluir|quero|por|reais|real|de/g, "")
-    .trim();
+  frase = frase.toLowerCase().trim();
 
   const palavras = frase.split(" ");
+  const verbo = palavras[0];
+
+  const comandosAprendidos = await listarComandos();
+  const comandosPadrao = ["adicionar", "colocar", "incluir"];
+
+  const todosComandos = [...comandosPadrao, ...comandosAprendidos];
+
+  if (!todosComandos.includes(verbo)) {
+    // Aprende automaticamente novo verbo
+    if (palavras.length >= 2) {
+      await salvarComando(verbo);
+    } else {
+      return;
+    }
+  }
+
+  // Remove verbo
+  palavras.shift();
 
   let quantidade = 1;
   let preco = 0;
-  let nome = "";
 
   const numeros = palavras.filter(p =>
     !isNaN(p.replace(",", "."))
@@ -188,17 +207,15 @@ async function interpretarComando(frase) {
     preco = parseFloat(numeros[1].replace(",", "."));
   }
 
-  nome = palavras
+  const nome = palavras
     .filter(p => isNaN(p.replace(",", ".")))
-    .join(" ");
-
-  if (!nome) nome = "Item";
+    .join(" ") || "Item";
 
   await addItem(nome, quantidade, preco);
   renderList();
 }
 
-/* ================= INICIALIZAÇÃO APP ================= */
+/* ================= START ================= */
 
 window.onload = async () => {
   await initDB();
