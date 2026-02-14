@@ -1,215 +1,178 @@
-/* ================= ESTADO GLOBAL ================= */
+/* ================= CONFIG BANCO ================= */
 
-let state = {
-  modo: "esperando",
-  orcamento: 0,
-  deslocamento: 0,
-  carrinho: []
-};
+const DB_NAME = "comprasDB";
+const DB_VERSION = 1;
+const STORE_NAME = "itens";
 
-let recognition = null;
-let ouvindo = false;
+let db;
 
-/* ================= ELEMENTOS DOM ================= */
+/* ================= INICIALIZAÇÃO ================= */
 
-const statusEl = document.getElementById("status");
-const listaEl = document.getElementById("lista");
-const totalEl = document.getElementById("total");
-const orcamentoEl = document.getElementById("orcamento");
-const deslocamentoEl = document.getElementById("deslocamento");
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-/* ================= PERSISTÊNCIA ================= */
+    request.onerror = () => reject("Erro ao abrir o banco");
 
-function salvarDados() {
-  localStorage.setItem("assistenteCompras", JSON.stringify(state));
+    request.onsuccess = () => {
+      db = request.result;
+      resolve(db);
+    };
+
+    request.onupgradeneeded = (event) => {
+      db = event.target.result;
+
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true
+        });
+
+        store.createIndex("nome", "nome", { unique: false });
+      }
+    };
+  });
 }
 
-function carregarDados() {
-  const dados = localStorage.getItem("assistenteCompras");
-  if (dados) {
-    state = JSON.parse(dados);
-  }
+/* ================= ADICIONAR ITEM ================= */
+
+function addItem(nome, quantidade = 1, preco = 0) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+
+    const item = {
+      nome,
+      quantidade,
+      preco,
+      criadoEm: new Date()
+    };
+
+    const request = store.add(item);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject("Erro ao adicionar item");
+  });
 }
 
-/* ================= UTIL ================= */
+/* ================= LISTAR ITENS ================= */
 
-function formatarMoeda(valor) {
-  return "R$ " + valor.toFixed(2);
+function getItems() {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, "readonly");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject("Erro ao buscar itens");
+  });
 }
 
-function extrairNumero(texto) {
-  const match = texto.match(/(\d+[.,]?\d*)/);
-  if (match) {
-    return parseFloat(match[1].replace(",", "."));
-  }
-  return 0;
+/* ================= REMOVER ITEM ================= */
+
+function deleteItem(id) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(id);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject("Erro ao deletar item");
+  });
+}
+
+/* ================= RENDERIZAR LISTA ================= */
+
+async function renderList() {
+  const lista = document.getElementById("shoppingList");
+  lista.innerHTML = "";
+
+  const itens = await getItems();
+  let total = 0;
+
+  itens.forEach(item => {
+    total += item.quantidade * item.preco;
+
+    const li = document.createElement("li");
+    li.className = "item-card";
+    li.innerHTML = `
+      <strong>${item.nome}</strong><br>
+      Qtd: ${item.quantidade} <br>
+      Preço: R$ ${item.preco.toFixed(2)} <br>
+      <button onclick="remover(${item.id})" class="secondary">Remover</button>
+    `;
+
+    lista.appendChild(li);
+  });
+
+  document.getElementById("total").innerText =
+    "R$ " + total.toFixed(2);
+}
+
+/* ================= REMOVER ================= */
+
+async function remover(id) {
+  await deleteItem(id);
+  renderList();
 }
 
 /* ================= VOZ ================= */
 
-function iniciarReconhecimento() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+function startVoice() {
+  const status = document.getElementById("status");
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    alert("Seu navegador não suporta reconhecimento de voz.");
+    status.innerText = "Reconhecimento de voz não suportado.";
     return;
   }
 
-  recognition = new SpeechRecognition();
+  const recognition = new SpeechRecognition();
   recognition.lang = "pt-BR";
-  recognition.continuous = true;
   recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
 
-  recognition.onresult = function (event) {
-    const texto = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-    statusEl.textContent = "Você disse: " + texto;
-    interpretarComando(texto);
+  recognition.onstart = () => {
+    status.innerText = "Ouvindo...";
   };
 
-  recognition.onerror = function (e) {
-    console.error(e);
-    statusEl.textContent = "Erro no reconhecimento.";
+  recognition.onresult = async (event) => {
+    const frase = event.results[0][0].transcript;
+    status.innerText = "Você disse: " + frase;
+
+    interpretarComando(frase);
   };
 
-  recognition.onend = function () {
-    if (ouvindo) {
-      recognition.start(); // mantém contínuo
-    }
+  recognition.onerror = () => {
+    status.innerText = "Erro no reconhecimento.";
   };
+
+  recognition.start();
 }
 
-function startVoice() {
-  if (!recognition) iniciarReconhecimento();
+/* ================= INTERPRETAR COMANDO ================= */
 
-  if (!ouvindo) {
-    recognition.start();
-    statusEl.textContent = "🎤 Ouvindo...";
-    ouvindo = true;
-  } else {
-    recognition.stop();
-    statusEl.textContent = "Reconhecimento parado.";
-    ouvindo = false;
-  }
-}
+async function interpretarComando(frase) {
+  frase = frase.toLowerCase();
 
-/* ================= INTERPRETAÇÃO ================= */
+  // Exemplo: "adicionar 2 arroz 10"
+  if (frase.includes("adicionar")) {
+    const palavras = frase.split(" ");
 
-function interpretarComando(texto) {
+    let quantidade = parseInt(palavras[1]) || 1;
+    let nome = palavras[2] || "Item";
+    let preco = parseFloat(palavras[3]) || 0;
 
-  if (texto.includes("iniciar compra")) {
-    state = {
-      modo: "compra_iniciada",
-      orcamento: 0,
-      deslocamento: 0,
-      carrinho: []
-    };
-    atualizarTela();
-    statusEl.textContent = "Compra iniciada.";
-    return;
-  }
-
-  if (texto.includes("orçamento")) {
-    const valor = extrairNumero(texto);
-    if (valor > 0) {
-      state.orcamento = valor;
-      atualizarTela();
-    }
-    return;
-  }
-
-  if (texto.includes("deslocamento")) {
-    const valor = extrairNumero(texto);
-    if (valor > 0) {
-      state.deslocamento = valor;
-      atualizarTela();
-    }
-    return;
-  }
-
-  if (texto.includes("remover")) {
-    const nome = texto.replace("remover", "").trim();
-    state.carrinho = state.carrinho.filter(item => !item.nome.includes(nome));
-    atualizarTela();
-    statusEl.textContent = `${nome} removido.`;
-    return;
-  }
-
-  if (texto.includes("encher carrinho")) {
-    state.modo = "enchendo";
-    statusEl.textContent = "Modo carrinho ativado.";
-    return;
-  }
-
-  if (texto.includes("finalizar compra")) {
-    state.modo = "esperando";
-    statusEl.textContent = "Compra finalizada.";
-    return;
-  }
-
-  if (state.modo === "enchendo") {
-    adicionarProdutoPorVoz(texto);
+    await addItem(nome, quantidade, preco);
+    renderList();
   }
 }
 
-/* ================= PRODUTO ================= */
+/* ================= START APP ================= */
 
-function adicionarProdutoPorVoz(texto) {
-
-  const precoMatch = texto.match(/(\d+[.,]?\d*)\s*(reais|real|r\$)?/);
-  const qtdMatch = texto.match(/(\d+)\s*(pacote|pacotes|quilo|quilos|kg|unidade|unidades)/);
-
-  const preco = precoMatch ? parseFloat(precoMatch[1].replace(",", ".")) : 0;
-  const quantidade = qtdMatch ? parseInt(qtdMatch[1]) : 1;
-
-  const nome = texto.replace(/(\d+[.,]?\d*).*$/, "").trim();
-
-  if (preco === 0) {
-    statusEl.textContent = "Não consegui identificar o preço.";
-    return;
-  }
-
-  state.carrinho.push({
-    nome,
-    preco,
-    quantidade
-  });
-
-  atualizarTela();
-}
-
-/* ================= TELA ================= */
-
-function atualizarTela() {
-  listaEl.innerHTML = "";
-  let total = 0;
-
-  state.carrinho.forEach(item => {
-    const li = document.createElement("li");
-    li.textContent = `${item.nome} - ${item.quantidade}x - ${formatarMoeda(item.preco)}`;
-    listaEl.appendChild(li);
-
-    total += item.preco * item.quantidade;
-  });
-
-  total += state.deslocamento;
-
-  totalEl.textContent = formatarMoeda(total);
-  orcamentoEl.textContent = formatarMoeda(state.orcamento);
-  deslocamentoEl.textContent = formatarMoeda(state.deslocamento);
-
-  // 🔥 Alerta de orçamento
-  if (state.orcamento > 0 && total > state.orcamento) {
-    totalEl.style.color = "#ff4b2b";
-    statusEl.textContent = "⚠️ Orçamento ultrapassado!";
-    if (navigator.vibrate) navigator.vibrate(300);
-  } else {
-    totalEl.style.color = "#00ff9d";
-  }
-
-  salvarDados();
-}
-
-/* ================= INICIALIZAÇÃO ================= */
-
-carregarDados();
-atualizarTela();
+window.onload = async () => {
+  await initDB();
+  renderList();
+};
