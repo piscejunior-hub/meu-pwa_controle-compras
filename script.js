@@ -12,7 +12,7 @@ function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject("Erro ao abrir o banco");
+    request.onerror = () => reject("Erro ao abrir banco");
 
     request.onsuccess = () => {
       db = request.result;
@@ -77,7 +77,7 @@ function deleteItem(id) {
     const request = store.delete(id);
 
     request.onsuccess = () => resolve();
-    request.onerror = () => reject("Erro ao deletar item");
+    request.onerror = () => reject("Erro ao remover item");
   });
 }
 
@@ -85,10 +85,12 @@ function deleteItem(id) {
 
 async function renderList() {
   const lista = document.getElementById("shoppingList");
+  const totalElement = document.getElementById("total");
+
   lista.innerHTML = "";
+  let total = 0;
 
   const itens = await getItems();
-  let total = 0;
 
   itens.forEach(item => {
     total += item.quantidade * item.preco;
@@ -97,16 +99,15 @@ async function renderList() {
     li.className = "item-card";
     li.innerHTML = `
       <strong>${item.nome}</strong><br>
-      Qtd: ${item.quantidade} <br>
-      Preço: R$ ${item.preco.toFixed(2)} <br>
+      Qtd: ${item.quantidade}<br>
+      Preço: R$ ${item.preco.toFixed(2)}<br>
       <button onclick="remover(${item.id})" class="secondary">Remover</button>
     `;
 
     lista.appendChild(li);
   });
 
-  document.getElementById("total").innerText =
-    "R$ " + total.toFixed(2);
+  totalElement.innerText = "R$ " + total.toFixed(2);
 }
 
 /* ================= REMOVER ================= */
@@ -142,7 +143,7 @@ function startVoice() {
     const frase = event.results[0][0].transcript;
     status.innerText = "Você disse: " + frase;
 
-    interpretarComando(frase);
+    await interpretarComando(frase);
   };
 
   recognition.onerror = () => {
@@ -152,25 +153,52 @@ function startVoice() {
   recognition.start();
 }
 
-/* ================= INTERPRETAR COMANDO ================= */
+/* ================= INTERPRETAR COMANDO INTELIGENTE ================= */
 
 async function interpretarComando(frase) {
   frase = frase.toLowerCase();
 
-  // Exemplo: "adicionar 2 arroz 10"
-  if (frase.includes("adicionar")) {
-    const palavras = frase.split(" ");
-
-    let quantidade = parseInt(palavras[1]) || 1;
-    let nome = palavras[2] || "Item";
-    let preco = parseFloat(palavras[3]) || 0;
-
-    await addItem(nome, quantidade, preco);
-    renderList();
+  if (!frase.includes("adicionar") &&
+      !frase.includes("colocar") &&
+      !frase.includes("incluir")) {
+    return;
   }
+
+  // Limpeza da frase
+  frase = frase
+    .replace(/adicionar|colocar|incluir|quero|por|reais|real|de/g, "")
+    .trim();
+
+  const palavras = frase.split(" ");
+
+  let quantidade = 1;
+  let preco = 0;
+  let nome = "";
+
+  const numeros = palavras.filter(p =>
+    !isNaN(p.replace(",", "."))
+  );
+
+  if (numeros.length === 1) {
+    preco = parseFloat(numeros[0].replace(",", "."));
+  }
+
+  if (numeros.length >= 2) {
+    quantidade = parseInt(numeros[0]);
+    preco = parseFloat(numeros[1].replace(",", "."));
+  }
+
+  nome = palavras
+    .filter(p => isNaN(p.replace(",", ".")))
+    .join(" ");
+
+  if (!nome) nome = "Item";
+
+  await addItem(nome, quantidade, preco);
+  renderList();
 }
 
-/* ================= START APP ================= */
+/* ================= INICIALIZAÇÃO APP ================= */
 
 window.onload = async () => {
   await initDB();
