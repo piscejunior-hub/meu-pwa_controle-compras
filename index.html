@@ -7,85 +7,9 @@
   <title>Lista de Compras Inteligente</title>
 
   <link rel="manifest" href="manifest.json">
-
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: "Segoe UI", Roboto, Arial, sans-serif;
-    }
-
-    body {
-      background: linear-gradient(145deg, #1f1b2e, #141020);
-      color: white;
-      padding: 20px;
-      min-height: 100vh;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      font-size: 1.8rem;
-    }
-
-    .voice-btn {
-      width: 100%;
-      padding: 16px;
-      border: none;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #8e2de2, #4a00e0);
-      color: white;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-bottom: 15px;
-      transition: 0.2s ease;
-    }
-
-    .voice-btn.stop {
-      background: linear-gradient(135deg, #ff416c, #ff4b2b);
-    }
-
-    .status {
-      text-align: center;
-      margin-bottom: 20px;
-      font-size: 14px;
-      color: #ccc;
-      min-height: 20px;
-    }
-
-    .card {
-      background: #2a243f;
-      padding: 15px;
-      border-radius: 16px;
-      margin-bottom: 15px;
-    }
-
-    .card h3 {
-      margin-bottom: 8px;
-      font-size: 15px;
-      color: #d9a7ff;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    li {
-      padding: 8px;
-      border-bottom: 1px solid #444;
-      font-size: 14px;
-    }
-
-    #total {
-      font-size: 22px;
-      font-weight: bold;
-      color: #00ff9d;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <h1>🛒 Lista de Compras Inteligente</h1>
@@ -93,30 +17,57 @@
 <button id="voiceBtn" class="voice-btn">🎤 Iniciar</button>
 <div id="status" class="status">Pronto para ouvir...</div>
 
-<div class="card">
-  <h3>💰 Orçamento</h3>
-  <p id="orcamento">R$ 0,00</p>
-</div>
+<div class="layout">
 
-<div class="card">
-  <h3>🚕 Deslocamento</h3>
-  <p id="deslocamento">R$ 0,00</p>
-</div>
+  <!-- 🔵 COLUNA ESQUERDA -->
+  <div class="coluna-esquerda">
 
-<div class="card">
-  <h3>🧾 Carrinho</h3>
-  <ul id="lista"></ul>
-</div>
+    <div class="card">
+      <h3>💰 Orçamento</h3>
+      <p id="orcamento">R$ 0,00</p>
+    </div>
 
-<div class="card">
-  <h3>📊 Total</h3>
-  <p id="total">R$ 0,00</p>
+    <div class="card">
+      <h3>🚕 Deslocamento</h3>
+      <p id="deslocamento">R$ 0,00</p>
+    </div>
+
+    <div class="card">
+      <h3>🧾 Carrinho</h3>
+      <ul id="lista"></ul>
+    </div>
+
+    <div class="card">
+      <h3>📊 Total</h3>
+      <p id="total">R$ 0,00</p>
+    </div>
+
+  </div>
+
+  <!-- 🟣 COLUNA DIREITA -->
+  <div class="coluna-direita">
+
+    <div class="card">
+      <h3>📊 Consumo Calculado</h3>
+      <div id="listaConsumo">
+        <p style="color:#aaa;">Nenhum cálculo ainda...</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🛒 Registrar Compra</h3>
+      <div id="formCompra">
+        <p style="color:#aaa;">Selecione um item do consumo</p>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <script src="script.js"></script>
 
 <script>
-  // 🔥 Controle visual do botão de voz
   const voiceBtn = document.getElementById("voiceBtn");
 
   voiceBtn.addEventListener("click", () => {
@@ -131,7 +82,6 @@
     }
   });
 
-  // 🔥 Registro do Service Worker
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js")
       .then(() => console.log("Service Worker registrado"))
