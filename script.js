@@ -62,22 +62,6 @@ function getItems() {
   });
 }
 
-function updateItem(item) {
-  return new Promise(resolve => {
-    const tx = db.transaction(STORE_ITENS, "readwrite");
-    tx.objectStore(STORE_ITENS).put(item)
-      .onsuccess = resolve;
-  });
-}
-
-function deleteItem(id) {
-  return new Promise(resolve => {
-    const tx = db.transaction(STORE_ITENS, "readwrite");
-    tx.objectStore(STORE_ITENS).delete(id)
-      .onsuccess = resolve;
-  });
-}
-
 function limparLista() {
   return new Promise(resolve => {
     const tx = db.transaction(STORE_ITENS, "readwrite");
@@ -107,9 +91,7 @@ async function renderList() {
     li.innerHTML = `
       <strong>${item.nome}</strong><br>
       Qtd: ${item.quantidade}<br>
-      Preço: R$ ${item.preco.toFixed(2)}<br>
-      <button onclick="editar(${item.id})">Editar</button>
-      <button onclick="remover(${item.id})" class="secondary">Remover</button>
+      Preço: R$ ${item.preco.toFixed(2)}
     `;
     lista.appendChild(li);
   });
@@ -119,7 +101,7 @@ async function renderList() {
 
 /* ================= FLUXO INTELIGENTE ================= */
 
-let fluxoCompra = resetFluxo();
+let fluxo = resetFluxo();
 
 function resetFluxo() {
   return {
@@ -139,9 +121,11 @@ const consumoMedio = {
   carne: 0.15
 };
 
-function iniciarFluxoCompra() {
-  fluxoCompra = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
-  falar("Compra para quantos dias?");
+function normalizar(texto) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 function extrairNumero(texto) {
@@ -149,66 +133,63 @@ function extrairNumero(texto) {
   return match ? parseInt(match[0]) : null;
 }
 
-function normalizarTexto(texto) {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+function iniciarFluxo() {
+  fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
+  falar("Compra para quantos dias?");
 }
 
 async function processarFluxo(resposta) {
 
-  resposta = normalizarTexto(resposta);
+  resposta = normalizar(resposta);
 
-  if (fluxoCompra.etapa === 1) {
+  if (fluxo.etapa === 1) {
     const numero = extrairNumero(resposta);
     if (!numero) {
-      falar("Não entendi o número de dias. Pode repetir?");
+      falar("Diga apenas o número de dias.");
       return true;
     }
-    fluxoCompra.dias = numero;
-    fluxoCompra.etapa = 2;
+    fluxo.dias = numero;
+    fluxo.etapa = 2;
     falar("Quantas pessoas tem na casa?");
     return true;
   }
 
-  if (fluxoCompra.etapa === 2) {
+  if (fluxo.etapa === 2) {
     const numero = extrairNumero(resposta);
     if (!numero) {
-      falar("Não entendi o número de pessoas. Pode repetir?");
+      falar("Diga apenas o número de pessoas.");
       return true;
     }
-    fluxoCompra.pessoas = numero;
-    fluxoCompra.etapa = 3;
-    falar("Quais produtos serão comprados?");
+    fluxo.pessoas = numero;
+    fluxo.etapa = 3;
+    falar("Quais produtos?");
     return true;
   }
 
-  if (fluxoCompra.etapa === 3) {
+  if (fluxo.etapa === 3) {
 
-    const produtos = resposta.split(",").map(p => p.trim());
+    const palavras = resposta.split(" ");
 
-    for (const produto of produtos) {
+    for (const palavra of palavras) {
 
-      if (!consumoMedio[produto]) continue;
+      if (!consumoMedio[palavra]) continue;
 
       let quantidade =
-        consumoMedio[produto] *
-        fluxoCompra.pessoas *
-        fluxoCompra.dias;
+        consumoMedio[palavra] *
+        fluxo.pessoas *
+        fluxo.dias;
 
-      quantidade = produto === "pao"
+      quantidade = palavra === "pao"
         ? Math.ceil(quantidade)
         : parseFloat(quantidade.toFixed(2));
 
-      await addItem(produto, quantidade, 0);
+      await addItem(palavra, quantidade, 0);
     }
 
     await renderList();
+    falar("Compra calculada com sucesso.");
 
-    falar("Lista inteligente criada com sucesso.");
-
-    fluxoCompra = resetFluxo();
+    fluxo = resetFluxo();
     return true;
   }
 
@@ -217,19 +198,17 @@ async function processarFluxo(resposta) {
 
 /* ================= VOZ ================= */
 
-let recognition;
-
-function iniciarReconhecimento() {
+function startVoice() {
 
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    alert("Reconhecimento de voz não suportado.");
+    alert("Voz não suportada neste navegador.");
     return;
   }
 
-  recognition = new SpeechRecognition();
+  const recognition = new SpeechRecognition();
   recognition.lang = "pt-BR";
   recognition.interimResults = false;
   recognition.continuous = false;
@@ -239,60 +218,27 @@ function iniciarReconhecimento() {
     const frase = event.results[0][0].transcript;
     console.log("Reconhecido:", frase);
 
-    if (fluxoCompra.ativo) {
+    if (fluxo.ativo) {
       const tratado = await processarFluxo(frase);
       if (tratado) return;
     }
 
-    await interpretarComando(frase);
-  };
+    frase = normalizar(frase);
 
-  recognition.onend = () => {
-    setTimeout(() => {
-      if (recognition) recognition.start();
-    }, 800);
+    if (frase.includes("iniciar compra")) {
+      iniciarFluxo();
+      return;
+    }
+
+    if (frase.includes("limpar")) {
+      await limparLista();
+      await renderList();
+      falar("Lista limpa.");
+      return;
+    }
   };
 
   recognition.start();
-}
-
-/* ================= INTERPRETAÇÃO ================= */
-
-async function interpretarComando(frase) {
-
-  frase = normalizarTexto(frase);
-
-  if (frase.includes("iniciar compra")) {
-    iniciarFluxoCompra();
-    return;
-  }
-
-  if (frase.includes("limpar")) {
-    await limparLista();
-    await renderList();
-    falar("Lista limpa completamente.");
-    return;
-  }
-
-  const palavras = frase.split(" ");
-  palavras.shift();
-
-  const numeros = palavras.filter(p => !isNaN(p));
-
-  let quantidade = 1;
-  let preco = 0;
-
-  if (numeros.length === 1) preco = parseFloat(numeros[0]);
-  if (numeros.length >= 2) {
-    quantidade = parseInt(numeros[0]);
-    preco = parseFloat(numeros[1]);
-  }
-
-  const nome = palavras.filter(p => isNaN(p)).join(" ");
-
-  await addItem(nome, quantidade, preco);
-  await renderList();
-  falar("Item adicionado.");
 }
 
 /* ================= START ================= */
