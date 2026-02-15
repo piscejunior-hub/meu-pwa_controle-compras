@@ -31,6 +31,15 @@ function initDB() {
   });
 }
 
+/* ================= LIMPAR CARRINHO ================= */
+
+function limparCarrinho() {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    tx.objectStore(STORE_ITENS).clear().onsuccess = resolve;
+  });
+}
+
 /* ================= FALAR ================= */
 
 function falar(texto) {
@@ -66,6 +75,7 @@ function getItems() {
 async function renderList() {
   const lista = document.getElementById("lista");
   const totalEl = document.getElementById("total");
+
   lista.innerHTML = "";
 
   const itens = await getItems();
@@ -116,6 +126,49 @@ function mostrarConsumo(listaProdutos) {
   });
 }
 
+/* ================= PREPARAR COMPRA ================= */
+
+function prepararCompra(nome, quantidade) {
+
+  const form = document.getElementById("formCompra");
+
+  form.innerHTML = `
+    <h3>${nome}</h3>
+    <p>Quantidade recomendada: ${quantidade}</p>
+
+    <label>Quantidade que vai comprar:</label>
+    <input type="number" id="qtdCompra" value="${quantidade}" min="0">
+
+    <label>Preço unitário:</label>
+    <input type="number" id="precoCompra" step="0.01" min="0">
+
+    <button onclick="confirmarCompra('${nome}')">
+      Confirmar Compra
+    </button>
+  `;
+}
+
+/* ================= CONFIRMAR COMPRA ================= */
+
+async function confirmarCompra(nome) {
+
+  const qtd = parseFloat(document.getElementById("qtdCompra").value);
+  const preco = parseFloat(document.getElementById("precoCompra").value);
+
+  if (isNaN(qtd) || isNaN(preco) || qtd <= 0 || preco <= 0) {
+    alert("Informe quantidade e preço válidos.");
+    return;
+  }
+
+  await addItem(nome, qtd, preco);
+  await renderList();
+
+  document.getElementById("formCompra").innerHTML =
+    "<p style='color:#aaa;'>Compra adicionada!</p>";
+
+  falar("Produto adicionado ao carrinho.");
+}
+
 /* ================= FLUXO ================= */
 
 let fluxo = {
@@ -125,25 +178,29 @@ let fluxo = {
   pessoas: 0
 };
 
-function iniciarFluxo() {
+async function iniciarFluxo() {
+
+  // 🔥 LIMPA TUDO AO INICIAR NOVA COMPRA
+  await limparCarrinho();
+  await renderList();
+
+  document.getElementById("listaConsumo").innerHTML = "";
+  document.getElementById("formCompra").innerHTML = "";
+
   fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
+
   falar("Compra para quantos dias?");
   document.getElementById("status").innerText = "Compra para quantos dias?";
 }
 
-/* ================= NUMEROS POR EXTENSO ================= */
+/* ================= NUMEROS ================= */
 
 const numerosExtenso = {
   um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
-  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10,
-  onze: 11, doze: 12, treze: 13, quatorze: 14,
-  quinze: 15, dezesseis: 16, dezessete: 17,
-  dezoito: 18, dezenove: 19, vinte: 20,
-  trinta: 30
+  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
 };
 
 function extrairNumero(texto) {
-
   const numeroDigito = texto.match(/\d+/);
   if (numeroDigito) return parseInt(numeroDigito[0]);
 
@@ -169,12 +226,10 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 1) {
     const dias = extrairNumero(frase);
-
     if (!dias || dias <= 0) {
-      falar("Não entendi os dias. Diga apenas o número.");
+      falar("Não entendi os dias.");
       return;
     }
-
     fluxo.dias = dias;
     fluxo.etapa = 2;
     falar("Quantas pessoas?");
@@ -183,12 +238,10 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 2) {
     const pessoas = extrairNumero(frase);
-
     if (!pessoas || pessoas <= 0) {
-      falar("Não entendi as pessoas. Diga apenas o número.");
+      falar("Não entendi as pessoas.");
       return;
     }
-
     fluxo.pessoas = pessoas;
     fluxo.etapa = 3;
     falar("Quais produtos deseja comprar?");
@@ -200,7 +253,6 @@ async function processarFluxo(frase) {
     let listaProdutos = [];
 
     for (const produto in consumoMedio) {
-
       if (frase.includes(produto)) {
 
         let quantidade =
@@ -225,7 +277,6 @@ async function processarFluxo(frase) {
     }
 
     mostrarConsumo(listaProdutos);
-
     falar("Cálculo concluído.");
 
     fluxo.ativo = false;
@@ -233,29 +284,27 @@ async function processarFluxo(frase) {
   }
 }
 
-/* ================= VOZ ESTÁVEL ================= */
+/* ================= VOZ ================= */
 
 let recognition = null;
 let ouvindo = false;
 
 function startVoice() {
 
-  if (!('webkitSpeechRecognition' in window) &&
-      !('SpeechRecognition' in window)) {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
     alert("Use o Google Chrome.");
     return;
   }
-
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!recognition) {
 
     recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
-    recognition.interimResults = false;
     recognition.continuous = true;
-    recognition.maxAlternatives = 1;
+    recognition.interimResults = false;
 
     recognition.onresult = async (event) => {
 
@@ -275,24 +324,16 @@ function startVoice() {
       }
     };
 
-    recognition.onerror = (e) => {
-      console.log("Erro:", e.error);
-    };
-
     recognition.onend = () => {
       if (ouvindo) {
-        try {
-          recognition.start();
-        } catch (e) {}
+        try { recognition.start(); } catch (e) {}
       }
     };
   }
 
   if (!ouvindo) {
-    try {
-      recognition.start();
-      ouvindo = true;
-    } catch (e) {}
+    recognition.start();
+    ouvindo = true;
   } else {
     ouvindo = false;
     recognition.stop();
