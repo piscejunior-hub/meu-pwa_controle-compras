@@ -69,7 +69,6 @@ async function renderList() {
   lista.innerHTML = "";
 
   const itens = await getItems();
-
   let total = 0;
 
   itens.forEach(item => {
@@ -117,43 +116,6 @@ function mostrarConsumo(listaProdutos) {
   });
 }
 
-function prepararCompra(nome, quantidade) {
-  const form = document.getElementById("formCompra");
-
-  form.innerHTML = `
-    <h3>${nome}</h3>
-    <p>Quantidade recomendada: ${quantidade}</p>
-
-    <label>Quantidade que vai comprar:</label>
-    <input type="number" id="qtdCompra" value="${quantidade}">
-
-    <label>Preço unitário:</label>
-    <input type="number" id="precoCompra" step="0.01">
-
-    <button onclick="confirmarCompra('${nome}')">
-      Confirmar Compra
-    </button>
-  `;
-}
-
-async function confirmarCompra(nome) {
-  const qtd = parseFloat(document.getElementById("qtdCompra").value);
-  const preco = parseFloat(document.getElementById("precoCompra").value);
-
-  if (!qtd || !preco) {
-    alert("Informe quantidade e preço.");
-    return;
-  }
-
-  await addItem(nome, qtd, preco);
-  await renderList();
-
-  document.getElementById("formCompra").innerHTML =
-    "<p style='color:#aaa;'>Compra adicionada!</p>";
-
-  falar("Produto adicionado ao carrinho.");
-}
-
 /* ================= FLUXO ================= */
 
 let fluxo = {
@@ -169,9 +131,29 @@ function iniciarFluxo() {
   document.getElementById("status").innerText = "Compra para quantos dias?";
 }
 
+/* ================= NUMEROS POR EXTENSO ================= */
+
+const numerosExtenso = {
+  um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
+  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10,
+  onze: 11, doze: 12, treze: 13, quatorze: 14,
+  quinze: 15, dezesseis: 16, dezessete: 17,
+  dezoito: 18, dezenove: 19, vinte: 20,
+  trinta: 30
+};
+
 function extrairNumero(texto) {
-  const match = texto.match(/\d+/);
-  return match ? parseInt(match[0]) : null;
+
+  const numeroDigito = texto.match(/\d+/);
+  if (numeroDigito) return parseInt(numeroDigito[0]);
+
+  for (let palavra in numerosExtenso) {
+    if (texto.includes(palavra)) {
+      return numerosExtenso[palavra];
+    }
+  }
+
+  return null;
 }
 
 function normalizar(texto) {
@@ -187,10 +169,12 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 1) {
     const dias = extrairNumero(frase);
-    if (!dias) {
-      falar("Não entendi os dias.");
+
+    if (!dias || dias <= 0) {
+      falar("Não entendi os dias. Diga apenas o número.");
       return;
     }
+
     fluxo.dias = dias;
     fluxo.etapa = 2;
     falar("Quantas pessoas?");
@@ -199,10 +183,12 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 2) {
     const pessoas = extrairNumero(frase);
-    if (!pessoas) {
-      falar("Não entendi as pessoas.");
+
+    if (!pessoas || pessoas <= 0) {
+      falar("Não entendi as pessoas. Diga apenas o número.");
       return;
     }
+
     fluxo.pessoas = pessoas;
     fluxo.etapa = 3;
     falar("Quais produtos deseja comprar?");
@@ -247,32 +233,37 @@ async function processarFluxo(frase) {
   }
 }
 
-/* ================= VOZ ================= */
+/* ================= VOZ ESTÁVEL ================= */
 
-let recognition;
+let recognition = null;
 let ouvindo = false;
 
 function startVoice() {
 
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert("Use Chrome.");
+  if (!('webkitSpeechRecognition' in window) &&
+      !('SpeechRecognition' in window)) {
+    alert("Use o Google Chrome.");
     return;
   }
 
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
   if (!recognition) {
+
     recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
     recognition.interimResults = false;
     recognition.continuous = true;
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = async (event) => {
 
-      const frase = event.results[event.results.length - 1][0].transcript;
+      const frase =
+        event.results[event.results.length - 1][0].transcript;
 
-      document.getElementById("status").innerText = "Você disse: " + frase;
+      document.getElementById("status").innerText =
+        "Você disse: " + frase;
 
       if (fluxo.ativo) {
         await processarFluxo(frase);
@@ -287,14 +278,24 @@ function startVoice() {
     recognition.onerror = (e) => {
       console.log("Erro:", e.error);
     };
+
+    recognition.onend = () => {
+      if (ouvindo) {
+        try {
+          recognition.start();
+        } catch (e) {}
+      }
+    };
   }
 
   if (!ouvindo) {
-    recognition.start();
-    ouvindo = true;
+    try {
+      recognition.start();
+      ouvindo = true;
+    } catch (e) {}
   } else {
-    recognition.stop();
     ouvindo = false;
+    recognition.stop();
   }
 }
 
