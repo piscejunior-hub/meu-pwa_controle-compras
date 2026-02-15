@@ -43,6 +43,26 @@ h1 {
   text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
 }
 
+/* ================= LAYOUT PRINCIPAL ================= */
+
+.layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.coluna-esquerda {
+  flex: 1;
+  min-width: 0;
+}
+
+.coluna-direita {
+  flex: 1;
+  min-width: 0;
+  position: sticky;
+  top: 16px;
+}
+
 /* ================= CARDS ================= */
 .card {
   background: linear-gradient(145deg, var(--bg-card-1), var(--bg-card-2));
@@ -112,10 +132,25 @@ button.secondary {
   margin-top: 12px;
 }
 
-/* ================= LISTA ================= */
+/* ================= LISTAS ================= */
 #shoppingList {
   list-style: none;
   margin-top: 12px;
+}
+
+/* Lista de consumo */
+#listaConsumo div {
+  background: var(--bg-item);
+  padding: 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+#listaConsumo button {
+  margin-top: 10px;
+  font-size: 14px;
+  padding: 10px;
 }
 
 /* ================= ITEM ================= */
@@ -185,6 +220,17 @@ button.secondary {
 }
 
 /* ================= RESPONSIVO ================= */
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .coluna-direita {
+    position: relative;
+    top: 0;
+  }
+}
+
 @media (max-width: 480px) {
 
   body {
