@@ -3,90 +3,167 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#4a00e0">
   <title>Lista de Compras Inteligente</title>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+      background: #f3f4f6;
+    }
 
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+    h2 {
+      margin-top: 30px;
+    }
+
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
+    }
+
+    .produto {
+      background: white;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .carrinho {
+      background: #e5e7eb;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .total {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      background: #2563eb;
+      color: white;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+  </style>
 </head>
-
 <body>
 
 <h1>🛒 Lista de Compras Inteligente</h1>
 
-<button id="voiceBtn" class="voice-btn">🎤 Iniciar</button>
-<div id="status" class="status">Pronto para ouvir...</div>
+<h2>📦 Cadastrar Produto</h2>
+<input type="text" id="nomeProduto" placeholder="Nome do produto">
+<input type="number" id="precoProduto" placeholder="Preço" step="0.01">
+<button onclick="cadastrarProduto()">Cadastrar</button>
 
-<div class="layout">
+<h2>🛍 Produtos Disponíveis</h2>
+<div id="listaProdutos"></div>
 
-  <!-- 🔵 COLUNA ESQUERDA -->
-  <div class="coluna-esquerda">
+<h2>🧾 Carrinho</h2>
+<div class="carrinho" id="carrinho"></div>
+<div class="total" id="total"></div>
 
-    <div class="card">
-      <h3>💰 Orçamento</h3>
-      <p id="orcamento">R$ 0,00</p>
-    </div>
+<h2>💰 Orçamento</h2>
+<input type="number" id="orcamento" placeholder="Valor do orçamento">
 
-    <div class="card">
-      <h3>🚕 Deslocamento</h3>
-      <p id="deslocamento">R$ 0,00</p>
-    </div>
+<h2>🚗 Deslocamento</h2>
+<input type="number" id="deslocamento" placeholder="Valor deslocamento">
 
-    <div class="card">
-      <h3>🧾 Carrinho</h3>
-      <ul id="lista"></ul>
-    </div>
-
-    <div class="card">
-      <h3>📊 Total</h3>
-      <p id="total">R$ 0,00</p>
-    </div>
-
-  </div>
-
-  <!-- 🟣 COLUNA DIREITA -->
-  <div class="coluna-direita">
-
-    <div class="card">
-      <h3>📊 Consumo Calculado</h3>
-      <div id="listaConsumo">
-        <p style="color:#aaa;">Nenhum cálculo ainda...</p>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>🛒 Registrar Compra</h3>
-      <div id="formCompra">
-        <p style="color:#aaa;">Selecione um item do consumo</p>
-      </div>
-    </div>
-
-  </div>
-
-</div>
-
-<script src="script.js"></script>
+<br><br>
+<button class="btn-danger" onclick="novaCompra()">🆕 Nova Compra</button>
 
 <script>
-  const voiceBtn = document.getElementById("voiceBtn");
+let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+let carrinho = [];
 
-  voiceBtn.addEventListener("click", () => {
-    startVoice();
+function salvar() {
+  localStorage.setItem("produtos", JSON.stringify(produtos));
+}
 
-    if (!voiceBtn.classList.contains("stop")) {
-      voiceBtn.classList.add("stop");
-      voiceBtn.textContent = "🛑 Parar";
-    } else {
-      voiceBtn.classList.remove("stop");
-      voiceBtn.textContent = "🎤 Iniciar";
-    }
+function cadastrarProduto() {
+  const nome = document.getElementById("nomeProduto").value;
+  const preco = parseFloat(document.getElementById("precoProduto").value);
+
+  if (!nome || isNaN(preco)) {
+    alert("Preencha corretamente!");
+    return;
+  }
+
+  produtos.push({ nome, preco });
+  salvar();
+  renderProdutos();
+
+  document.getElementById("nomeProduto").value = "";
+  document.getElementById("precoProduto").value = "";
+}
+
+function renderProdutos() {
+  const lista = document.getElementById("listaProdutos");
+  lista.innerHTML = "";
+
+  produtos.forEach((produto, index) => {
+    lista.innerHTML += `
+      <div class="produto">
+        <span>${produto.nome} - R$ ${produto.preco.toFixed(2)}</span>
+        <button onclick="adicionarCarrinho(${index})">Comprar</button>
+      </div>
+    `;
+  });
+}
+
+function adicionarCarrinho(index) {
+  carrinho.push(produtos[index]);
+  renderCarrinho();
+}
+
+function renderCarrinho() {
+  const div = document.getElementById("carrinho");
+  div.innerHTML = "";
+
+  let total = 0;
+
+  carrinho.forEach((item, index) => {
+    total += item.preco;
+
+    div.innerHTML += `
+      <div class="produto">
+        <span>${item.nome} - R$ ${item.preco.toFixed(2)}</span>
+        <button class="btn-danger" onclick="removerCarrinho(${index})">X</button>
+      </div>
+    `;
   });
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js")
-      .then(() => console.log("Service Worker registrado"))
-      .catch(err => console.error("Erro SW:", err));
-  }
+  document.getElementById("total").innerText = "Total: R$ " + total.toFixed(2);
+}
+
+function removerCarrinho(index) {
+  carrinho.splice(index, 1);
+  renderCarrinho();
+}
+
+function novaCompra() {
+  carrinho = [];
+  document.getElementById("orcamento").value = "";
+  document.getElementById("deslocamento").value = "";
+  renderCarrinho();
+}
+
+renderProdutos();
 </script>
 
 </body>
