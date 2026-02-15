@@ -1,7 +1,7 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const STORE_ITENS = "itens";
 
 let db;
@@ -21,7 +21,6 @@ function initDB() {
 
     request.onupgradeneeded = (event) => {
       db = event.target.result;
-
       if (!db.objectStoreNames.contains(STORE_ITENS)) {
         db.createObjectStore(STORE_ITENS, {
           keyPath: "id",
@@ -47,9 +46,9 @@ function addItem(nome, quantidade, preco) {
   return new Promise(resolve => {
     const tx = db.transaction(STORE_ITENS, "readwrite");
     tx.objectStore(STORE_ITENS).add({
-      nome: nome.trim(),
-      quantidade: Number(quantidade) || 0,
-      preco: Number(preco) || 0
+      nome,
+      quantidade,
+      preco
     }).onsuccess = resolve;
   });
 }
@@ -73,6 +72,7 @@ function limparLista() {
 /* ================= RENDER ================= */
 
 async function renderList() {
+
   const lista = document.getElementById("lista");
   const totalElement = document.getElementById("total");
 
@@ -82,14 +82,16 @@ async function renderList() {
   const itens = await getItems();
 
   itens.forEach(item => {
+
     total += item.quantidade * item.preco;
 
     const li = document.createElement("li");
+
     li.innerHTML = `
-      <strong>${item.nome}</strong> —
-      Qtd: ${item.quantidade} —
-      R$ ${item.preco.toFixed(2)}
+      <strong>${item.nome}</strong><br>
+      Quantidade recomendada: ${item.quantidade}<br>
     `;
+
     lista.appendChild(li);
   });
 
@@ -151,40 +153,53 @@ async function processarFluxo(frase) {
   if (fluxo.etapa === 2) {
     const pessoas = extrairNumero(frase);
     if (!pessoas) {
-      falar("Não entendi o número de pessoas.");
+      falar("Não entendi as pessoas.");
       return true;
     }
     fluxo.pessoas = pessoas;
     fluxo.etapa = 3;
-    falar("Quais produtos? Pode falar arroz, feijão, carne...");
+    falar("Quais produtos deseja comprar?");
     return true;
   }
 
   if (fluxo.etapa === 3) {
 
-    const produtos = frase.split(" ");
+    let respostaVisual = "Você deve comprar:\n";
+    let encontrouProduto = false;
 
-    for (const produto of produtos) {
+    for (const produto in consumoMedio) {
 
-      if (!consumoMedio[produto]) continue;
+      if (frase.includes(produto)) {
 
-      let quantidade =
-        consumoMedio[produto] *
-        fluxo.pessoas *
-        fluxo.dias;
+        encontrouProduto = true;
 
-      quantidade = produto === "pao"
-        ? Math.ceil(quantidade)
-        : parseFloat(quantidade.toFixed(2));
+        let quantidade =
+          consumoMedio[produto] *
+          fluxo.pessoas *
+          fluxo.dias;
 
-      await addItem(produto, quantidade, 0);
+        quantidade = produto === "pao"
+          ? Math.ceil(quantidade)
+          : parseFloat(quantidade.toFixed(2));
+
+        await addItem(produto, quantidade, 0);
+
+        respostaVisual += `${produto}: ${quantidade}\n`;
+      }
+    }
+
+    if (!encontrouProduto) {
+      falar("Não reconheci os produtos.");
+      return true;
     }
 
     await renderList();
 
-    falar("Lista inteligente criada.");
-    fluxo.ativo = false;
-    fluxo.etapa = 0;
+    document.getElementById("status").innerText = respostaVisual;
+
+    falar("Cálculo concluído. Veja a lista na tela.");
+
+    fluxo = { ativo: false, etapa: 0, dias: 0, pessoas: 0 };
 
     return true;
   }
@@ -194,7 +209,7 @@ async function processarFluxo(frase) {
 
 /* ================= VOZ ================= */
 
-let recognition = null;
+let recognition;
 let ouvindo = false;
 
 function startVoice() {
@@ -227,6 +242,7 @@ function startVoice() {
   };
 
   recognition.onresult = async (event) => {
+
     const frase = event.results[0][0].transcript;
     status.innerText = "Você disse: " + frase;
 
@@ -235,7 +251,10 @@ function startVoice() {
       if (tratado) return;
     }
 
-    interpretarComando(frase);
+    if (normalizar(frase).includes("iniciar compra")) {
+      iniciarFluxo();
+      return;
+    }
   };
 
   recognition.onerror = (e) => {
@@ -249,25 +268,6 @@ function startVoice() {
   };
 
   recognition.start();
-}
-
-/* ================= COMANDOS ================= */
-
-async function interpretarComando(frase) {
-
-  frase = normalizar(frase);
-
-  if (frase.includes("iniciar compra")) {
-    iniciarFluxo();
-    return;
-  }
-
-  if (frase.includes("limpar")) {
-    await limparLista();
-    await renderList();
-    falar("Lista limpa.");
-    return;
-  }
 }
 
 /* ================= START ================= */
