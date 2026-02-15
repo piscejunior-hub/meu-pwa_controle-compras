@@ -61,22 +61,97 @@ function getItems() {
   });
 }
 
-/* ================= RENDER ================= */
+/* ================= RENDER CARRINHO ================= */
 
 async function renderList() {
   const lista = document.getElementById("lista");
+  const totalEl = document.getElementById("total");
   lista.innerHTML = "";
 
   const itens = await getItems();
 
+  let total = 0;
+
   itens.forEach(item => {
+    const subtotal = item.quantidade * item.preco;
+    total += subtotal;
+
     const li = document.createElement("li");
     li.innerHTML = `
       <strong>${item.nome}</strong><br>
-      Quantidade recomendada: ${item.quantidade}
+      Qtd: ${item.quantidade} |
+      Preço: R$ ${item.preco.toFixed(2)} |
+      Subtotal: R$ ${subtotal.toFixed(2)}
     `;
     lista.appendChild(li);
   });
+
+  totalEl.innerText = "R$ " + total.toFixed(2);
+}
+
+/* ================= CONSUMO ================= */
+
+const consumoMedio = {
+  arroz: 0.08,
+  feijao: 0.05,
+  leite: 0.2,
+  pao: 2,
+  macarrao: 0.07,
+  carne: 0.15
+};
+
+function mostrarConsumo(listaProdutos) {
+  const container = document.getElementById("listaConsumo");
+  container.innerHTML = "";
+
+  listaProdutos.forEach(item => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <strong>${item.nome}</strong><br>
+      Quantidade recomendada: ${item.quantidade}<br>
+      <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
+        Comprar
+      </button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function prepararCompra(nome, quantidade) {
+  const form = document.getElementById("formCompra");
+
+  form.innerHTML = `
+    <h3>${nome}</h3>
+    <p>Quantidade recomendada: ${quantidade}</p>
+
+    <label>Quantidade que vai comprar:</label>
+    <input type="number" id="qtdCompra" value="${quantidade}">
+
+    <label>Preço unitário:</label>
+    <input type="number" id="precoCompra" step="0.01">
+
+    <button onclick="confirmarCompra('${nome}')">
+      Confirmar Compra
+    </button>
+  `;
+}
+
+async function confirmarCompra(nome) {
+  const qtd = parseFloat(document.getElementById("qtdCompra").value);
+  const preco = parseFloat(document.getElementById("precoCompra").value);
+
+  if (!qtd || !preco) {
+    alert("Informe quantidade e preço.");
+    return;
+  }
+
+  await addItem(nome, qtd, preco);
+  await renderList();
+
+  document.getElementById("formCompra").innerHTML =
+    "<p style='color:#aaa;'>Compra adicionada!</p>";
+
+  falar("Produto adicionado ao carrinho.");
 }
 
 /* ================= FLUXO ================= */
@@ -86,15 +161,6 @@ let fluxo = {
   etapa: 0,
   dias: 0,
   pessoas: 0
-};
-
-const consumoMedio = {
-  arroz: 0.08,
-  feijao: 0.05,
-  leite: 0.2,
-  pao: 2,
-  macarrao: 0.07,
-  carne: 0.15
 };
 
 function iniciarFluxo() {
@@ -145,7 +211,7 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 3) {
 
-    let respostaVisual = "Você deve comprar:\n";
+    let listaProdutos = [];
 
     for (const produto in consumoMedio) {
 
@@ -160,15 +226,19 @@ async function processarFluxo(frase) {
           ? Math.ceil(quantidade)
           : parseFloat(quantidade.toFixed(2));
 
-        await addItem(produto, quantidade, 0);
-
-        respostaVisual += `${produto}: ${quantidade}\n`;
+        listaProdutos.push({
+          nome: produto,
+          quantidade
+        });
       }
     }
 
-    await renderList();
+    if (listaProdutos.length === 0) {
+      falar("Nenhum produto reconhecido.");
+      return;
+    }
 
-    document.getElementById("status").innerText = respostaVisual;
+    mostrarConsumo(listaProdutos);
 
     falar("Cálculo concluído.");
 
