@@ -12,7 +12,7 @@ function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject();
+    request.onerror = () => reject(request.error);
 
     request.onsuccess = () => {
       db = request.result;
@@ -35,9 +35,9 @@ function initDB() {
 /* ================= VOZ ================= */
 
 function falar(texto) {
+  speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(texto);
   utterance.lang = "pt-BR";
-  speechSynthesis.cancel();
   speechSynthesis.speak(utterance);
 }
 
@@ -98,7 +98,6 @@ async function renderList() {
   const itens = await getItems();
 
   itens.forEach(item => {
-
     if (!item.nome) return;
 
     total += item.quantidade * item.preco;
@@ -118,40 +117,18 @@ async function renderList() {
   totalElement.innerText = "R$ " + total.toFixed(2);
 }
 
-/* ================= EDITAR ================= */
+/* ================= FLUXO INTELIGENTE ================= */
 
-async function editar(id) {
-  const itens = await getItems();
-  const item = itens.find(i => i.id === id);
-  if (!item) return;
+let fluxoCompra = resetFluxo();
 
-  const novoNome = prompt("Novo nome:", item.nome);
-  const novaQtd = prompt("Nova quantidade:", item.quantidade);
-  const novoPreco = prompt("Novo preço:", item.preco);
-
-  item.nome = novoNome || item.nome;
-  item.quantidade = Number(novaQtd) || item.quantidade;
-  item.preco = Number(novoPreco) || item.preco;
-
-  await updateItem(item);
-  renderList();
+function resetFluxo() {
+  return {
+    ativo: false,
+    etapa: 0,
+    dias: 0,
+    pessoas: 0
+  };
 }
-
-/* ================= REMOVER ================= */
-
-async function remover(id) {
-  await deleteItem(id);
-  renderList();
-}
-
-/* ================= FLUXO COMPRA INTELIGENTE ================= */
-
-let fluxoCompra = {
-  ativo: false,
-  etapa: 0,
-  dias: 0,
-  pessoas: 0
-};
 
 const consumoMedio = {
   arroz: 0.08,
@@ -167,19 +144,41 @@ function iniciarFluxoCompra() {
   falar("Compra para quantos dias?");
 }
 
+function extrairNumero(texto) {
+  const match = texto.match(/\d+/);
+  return match ? parseInt(match[0]) : null;
+}
+
+function normalizarTexto(texto) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 async function processarFluxo(resposta) {
 
-  resposta = resposta.toLowerCase().trim();
+  resposta = normalizarTexto(resposta);
 
   if (fluxoCompra.etapa === 1) {
-    fluxoCompra.dias = parseInt(resposta);
+    const numero = extrairNumero(resposta);
+    if (!numero) {
+      falar("Não entendi o número de dias. Pode repetir?");
+      return true;
+    }
+    fluxoCompra.dias = numero;
     fluxoCompra.etapa = 2;
     falar("Quantas pessoas tem na casa?");
     return true;
   }
 
   if (fluxoCompra.etapa === 2) {
-    fluxoCompra.pessoas = parseInt(resposta);
+    const numero = extrairNumero(resposta);
+    if (!numero) {
+      falar("Não entendi o número de pessoas. Pode repetir?");
+      return true;
+    }
+    fluxoCompra.pessoas = numero;
     fluxoCompra.etapa = 3;
     falar("Quais produtos serão comprados?");
     return true;
@@ -198,11 +197,9 @@ async function processarFluxo(resposta) {
         fluxoCompra.pessoas *
         fluxoCompra.dias;
 
-      if (produto === "pao") {
-        quantidade = Math.ceil(quantidade);
-      } else {
-        quantidade = parseFloat(quantidade.toFixed(2));
-      }
+      quantidade = produto === "pao"
+        ? Math.ceil(quantidade)
+        : parseFloat(quantidade.toFixed(2));
 
       await addItem(produto, quantidade, 0);
     }
@@ -211,8 +208,7 @@ async function processarFluxo(resposta) {
 
     falar("Lista inteligente criada com sucesso.");
 
-    fluxoCompra = { ativo: false, etapa: 0, dias: 0, pessoas: 0 };
-
+    fluxoCompra = resetFluxo();
     return true;
   }
 
@@ -221,7 +217,9 @@ async function processarFluxo(resposta) {
 
 /* ================= VOZ ================= */
 
-function startVoice() {
+let recognition;
+
+function iniciarReconhecimento() {
 
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -231,12 +229,15 @@ function startVoice() {
     return;
   }
 
-  const recognition = new SpeechRecognition();
+  recognition = new SpeechRecognition();
   recognition.lang = "pt-BR";
+  recognition.interimResults = false;
+  recognition.continuous = false;
 
   recognition.onresult = async (event) => {
 
-    const frase = event.results[0][0].transcript.toLowerCase();
+    const frase = event.results[0][0].transcript;
+    console.log("Reconhecido:", frase);
 
     if (fluxoCompra.ativo) {
       const tratado = await processarFluxo(frase);
@@ -246,6 +247,12 @@ function startVoice() {
     await interpretarComando(frase);
   };
 
+  recognition.onend = () => {
+    setTimeout(() => {
+      if (recognition) recognition.start();
+    }, 800);
+  };
+
   recognition.start();
 }
 
@@ -253,7 +260,7 @@ function startVoice() {
 
 async function interpretarComando(frase) {
 
-  frase = frase.toLowerCase().trim();
+  frase = normalizarTexto(frase);
 
   if (frase.includes("iniciar compra")) {
     iniciarFluxoCompra();
@@ -262,7 +269,7 @@ async function interpretarComando(frase) {
 
   if (frase.includes("limpar")) {
     await limparLista();
-    renderList();
+    await renderList();
     falar("Lista limpa completamente.");
     return;
   }
@@ -270,7 +277,7 @@ async function interpretarComando(frase) {
   const palavras = frase.split(" ");
   palavras.shift();
 
-  const numeros = palavras.filter(p => !isNaN(p.replace(",", ".")));
+  const numeros = palavras.filter(p => !isNaN(p));
 
   let quantidade = 1;
   let preco = 0;
@@ -281,12 +288,10 @@ async function interpretarComando(frase) {
     preco = parseFloat(numeros[1]);
   }
 
-  const nome = palavras
-    .filter(p => isNaN(p.replace(",", ".")))
-    .join(" ");
+  const nome = palavras.filter(p => isNaN(p)).join(" ");
 
   await addItem(nome, quantidade, preco);
-  renderList();
+  await renderList();
   falar("Item adicionado.");
 }
 
@@ -294,5 +299,5 @@ async function interpretarComando(frase) {
 
 window.onload = async () => {
   await initDB();
-  renderList();
+  await renderList();
 };
