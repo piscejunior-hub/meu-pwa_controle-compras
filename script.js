@@ -1,8 +1,9 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 7;
+const DB_VERSION = 9;
 const STORE_ITENS = "itens";
+const STORE_PRODUTOS = "produtos";
 
 let db;
 
@@ -21,10 +22,17 @@ function initDB() {
 
     request.onupgradeneeded = (event) => {
       db = event.target.result;
+
       if (!db.objectStoreNames.contains(STORE_ITENS)) {
         db.createObjectStore(STORE_ITENS, {
           keyPath: "id",
           autoIncrement: true
+        });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_PRODUTOS)) {
+        db.createObjectStore(STORE_PRODUTOS, {
+          keyPath: "nome"
         });
       }
     };
@@ -40,16 +48,7 @@ function limparCarrinho() {
   });
 }
 
-/* ================= FALAR ================= */
-
-function falar(texto) {
-  speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(texto);
-  utterance.lang = "pt-BR";
-  speechSynthesis.speak(utterance);
-}
-
-/* ================= CRUD ================= */
+/* ================= CRUD ITENS ================= */
 
 function addItem(nome, quantidade, preco) {
   return new Promise(resolve => {
@@ -70,9 +69,27 @@ function getItems() {
   });
 }
 
+/* ================= CRUD PRODUTOS ================= */
+
+function addProduto(produto) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_PRODUTOS, "readwrite");
+    tx.objectStore(STORE_PRODUTOS).put(produto).onsuccess = resolve;
+  });
+}
+
+function getProdutos() {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_PRODUTOS, "readonly");
+    tx.objectStore(STORE_PRODUTOS).getAll()
+      .onsuccess = e => resolve(e.target.result || []);
+  });
+}
+
 /* ================= RENDER CARRINHO ================= */
 
 async function renderList() {
+
   const lista = document.getElementById("lista");
   const totalEl = document.getElementById("total");
 
@@ -98,30 +115,34 @@ async function renderList() {
   totalEl.innerText = "R$ " + total.toFixed(2);
 }
 
-/* ================= CONSUMO ================= */
+/* ================= FALAR ================= */
 
-const consumoMedio = {
-  arroz: 0.08,
-  feijao: 0.05,
-  leite: 0.2,
-  pao: 2,
-  macarrao: 0.07,
-  carne: 0.15
-};
+function falar(texto) {
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(texto);
+  utterance.lang = "pt-BR";
+  speechSynthesis.speak(utterance);
+}
+
+/* ================= MOSTRAR CONSUMO ================= */
 
 function mostrarConsumo(listaProdutos) {
+
   const container = document.getElementById("listaConsumo");
   container.innerHTML = "";
 
   listaProdutos.forEach(item => {
+
     const div = document.createElement("div");
+
     div.innerHTML = `
       <strong>${item.nome}</strong><br>
-      Quantidade recomendada: ${item.quantidade}<br>
+      Quantidade recomendada: ${item.quantidade} ${item.unidade}<br>
       <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
         Comprar
       </button>
     `;
+
     container.appendChild(div);
   });
 }
@@ -156,7 +177,7 @@ async function confirmarCompra(nome) {
   const preco = parseFloat(document.getElementById("precoCompra").value);
 
   if (isNaN(qtd) || isNaN(preco) || qtd <= 0 || preco <= 0) {
-    alert("Informe quantidade e preço válidos.");
+    alert("Informe valores válidos.");
     return;
   }
 
@@ -167,6 +188,34 @@ async function confirmarCompra(nome) {
     "<p style='color:#aaa;'>Compra adicionada!</p>";
 
   falar("Produto adicionado ao carrinho.");
+}
+
+/* ================= CADASTRAR PRODUTO ================= */
+
+async function cadastrarProduto() {
+
+  const nome = document.getElementById("novoNome").value.trim().toLowerCase();
+  const tipo = document.getElementById("novoTipo").value;
+  const consumo = parseFloat(document.getElementById("novoConsumo").value);
+  const unidade = document.getElementById("novaUnidade").value.trim();
+
+  if (!nome || isNaN(consumo) || consumo <= 0 || !unidade) {
+    alert("Preencha corretamente os campos.");
+    return;
+  }
+
+  await addProduto({
+    nome,
+    tipo,
+    consumo,
+    unidade
+  });
+
+  alert("Produto cadastrado com sucesso!");
+
+  document.getElementById("novoNome").value = "";
+  document.getElementById("novoConsumo").value = "";
+  document.getElementById("novaUnidade").value = "";
 }
 
 /* ================= FLUXO ================= */
@@ -180,7 +229,6 @@ let fluxo = {
 
 async function iniciarFluxo() {
 
-  // 🔥 LIMPA TUDO AO INICIAR NOVA COMPRA
   await limparCarrinho();
   await renderList();
 
@@ -250,23 +298,28 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 3) {
 
+    const produtos = await getProdutos();
     let listaProdutos = [];
 
-    for (const produto in consumoMedio) {
-      if (frase.includes(produto)) {
+    for (const produto of produtos) {
+
+      if (frase.includes(produto.nome)) {
 
         let quantidade =
-          consumoMedio[produto] *
+          produto.consumo *
           fluxo.pessoas *
           fluxo.dias;
 
-        quantidade = produto === "pao"
-          ? Math.ceil(quantidade)
-          : parseFloat(quantidade.toFixed(2));
+        if (produto.tipo === "unidade") {
+          quantidade = Math.ceil(quantidade);
+        } else {
+          quantidade = parseFloat(quantidade.toFixed(2));
+        }
 
         listaProdutos.push({
-          nome: produto,
-          quantidade
+          nome: produto.nome,
+          quantidade,
+          unidade: produto.unidade
         });
       }
     }
