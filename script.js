@@ -1,7 +1,7 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_ITENS = "itens";
 
 let db;
@@ -32,7 +32,7 @@ function initDB() {
   });
 }
 
-/* ================= VOZ FALAR ================= */
+/* ================= FALAR ================= */
 
 function falar(texto) {
   speechSynthesis.cancel();
@@ -96,10 +96,106 @@ async function renderList() {
   totalElement.innerText = "R$ " + total.toFixed(2);
 }
 
-/* ================= VOZ RECONHECIMENTO ================= */
+/* ================= FLUXO INTELIGENTE ================= */
+
+let fluxo = {
+  ativo: false,
+  etapa: 0,
+  dias: 0,
+  pessoas: 0
+};
+
+const consumoMedio = {
+  arroz: 0.08,
+  feijao: 0.05,
+  leite: 0.2,
+  pao: 2,
+  macarrao: 0.07,
+  carne: 0.15
+};
+
+function iniciarFluxo() {
+  fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
+  falar("Compra para quantos dias?");
+  document.getElementById("status").innerText = "Compra para quantos dias?";
+}
+
+function extrairNumero(texto) {
+  const match = texto.match(/\d+/);
+  return match ? parseInt(match[0]) : null;
+}
+
+function normalizar(texto) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+async function processarFluxo(frase) {
+
+  frase = normalizar(frase);
+
+  if (fluxo.etapa === 1) {
+    const dias = extrairNumero(frase);
+    if (!dias) {
+      falar("Não entendi os dias.");
+      return true;
+    }
+    fluxo.dias = dias;
+    fluxo.etapa = 2;
+    falar("Quantas pessoas?");
+    return true;
+  }
+
+  if (fluxo.etapa === 2) {
+    const pessoas = extrairNumero(frase);
+    if (!pessoas) {
+      falar("Não entendi o número de pessoas.");
+      return true;
+    }
+    fluxo.pessoas = pessoas;
+    fluxo.etapa = 3;
+    falar("Quais produtos? Pode falar arroz, feijão, carne...");
+    return true;
+  }
+
+  if (fluxo.etapa === 3) {
+
+    const produtos = frase.split(" ");
+
+    for (const produto of produtos) {
+
+      if (!consumoMedio[produto]) continue;
+
+      let quantidade =
+        consumoMedio[produto] *
+        fluxo.pessoas *
+        fluxo.dias;
+
+      quantidade = produto === "pao"
+        ? Math.ceil(quantidade)
+        : parseFloat(quantidade.toFixed(2));
+
+      await addItem(produto, quantidade, 0);
+    }
+
+    await renderList();
+
+    falar("Lista inteligente criada.");
+    fluxo.ativo = false;
+    fluxo.etapa = 0;
+
+    return true;
+  }
+
+  return false;
+}
+
+/* ================= VOZ ================= */
 
 let recognition = null;
-let isListening = false;
+let ouvindo = false;
 
 function startVoice() {
 
@@ -109,14 +205,14 @@ function startVoice() {
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    alert("Seu navegador não suporta reconhecimento de voz. Use Chrome no Android.");
+    alert("Use Chrome no Android.");
     return;
   }
 
-  if (isListening) {
+  if (ouvindo) {
     recognition.stop();
-    isListening = false;
-    status.innerText = "Reconhecimento parado.";
+    ouvindo = false;
+    status.innerText = "Parado.";
     return;
   }
 
@@ -126,34 +222,45 @@ function startVoice() {
   recognition.continuous = false;
 
   recognition.onstart = () => {
-    isListening = true;
+    ouvindo = true;
     status.innerText = "Ouvindo...";
   };
 
   recognition.onresult = async (event) => {
-    const frase = event.results[0][0].transcript.toLowerCase();
+    const frase = event.results[0][0].transcript;
     status.innerText = "Você disse: " + frase;
 
-    await interpretarComando(frase);
+    if (fluxo.ativo) {
+      const tratado = await processarFluxo(frase);
+      if (tratado) return;
+    }
+
+    interpretarComando(frase);
   };
 
-  recognition.onerror = (event) => {
-    console.error(event.error);
-    status.innerText = "Erro no reconhecimento.";
-    isListening = false;
+  recognition.onerror = (e) => {
+    status.innerText = "Erro: " + e.error;
+    ouvindo = false;
   };
 
   recognition.onend = () => {
-    isListening = false;
-    status.innerText = "Pronto para ouvir...";
+    ouvindo = false;
+    status.innerText = "Pronto.";
   };
 
   recognition.start();
 }
 
-/* ================= INTERPRETAÇÃO ================= */
+/* ================= COMANDOS ================= */
 
 async function interpretarComando(frase) {
+
+  frase = normalizar(frase);
+
+  if (frase.includes("iniciar compra")) {
+    iniciarFluxo();
+    return;
+  }
 
   if (frase.includes("limpar")) {
     await limparLista();
@@ -161,26 +268,6 @@ async function interpretarComando(frase) {
     falar("Lista limpa.");
     return;
   }
-
-  const palavras = frase.split(" ");
-  const numeros = palavras.filter(p => !isNaN(p));
-
-  let quantidade = 1;
-  let preco = 0;
-
-  if (numeros.length === 1) preco = parseFloat(numeros[0]);
-  if (numeros.length >= 2) {
-    quantidade = parseInt(numeros[0]);
-    preco = parseFloat(numeros[1]);
-  }
-
-  const nome = palavras.filter(p => isNaN(p)).join(" ");
-
-  if (!nome) return;
-
-  await addItem(nome, quantidade, preco);
-  await renderList();
-  falar("Item adicionado.");
 }
 
 /* ================= START ================= */
