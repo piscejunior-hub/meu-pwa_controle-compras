@@ -115,13 +115,18 @@ function mostrarConsumo(listaProdutos) {
 
   listaProdutos.forEach(item => {
     const div = document.createElement("div");
+
     div.innerHTML = `
-      <strong>${item.nome}</strong><br>
-      Quantidade recomendada: ${item.quantidade}<br>
-      <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
-        Comprar
-      </button>
+      <div style="margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+        <strong style="font-size:16px;">${item.nome.toUpperCase()}</strong><br><br>
+        ${item.detalhe}
+        <br><br>
+        <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
+          Comprar
+        </button>
+      </div>
     `;
+
     container.appendChild(div);
   });
 }
@@ -134,10 +139,10 @@ function prepararCompra(nome, quantidade) {
 
   form.innerHTML = `
     <h3>${nome}</h3>
-    <p>Quantidade recomendada: ${quantidade}</p>
+    <p><strong>Quantidade sugerida:</strong> ${quantidade}</p>
 
     <label>Quantidade que vai comprar:</label>
-    <input type="number" id="qtdCompra" value="${quantidade}" min="0">
+    <input type="number" id="qtdCompra" value="${quantidade}" min="0" step="0.01">
 
     <label>Preço unitário:</label>
     <input type="number" id="precoCompra" step="0.01" min="0">
@@ -180,7 +185,6 @@ let fluxo = {
 
 async function iniciarFluxo() {
 
-  // 🔥 LIMPA TUDO AO INICIAR NOVA COMPRA
   await limparCarrinho();
   await renderList();
 
@@ -209,7 +213,6 @@ function extrairNumero(texto) {
       return numerosExtenso[palavra];
     }
   }
-
   return null;
 }
 
@@ -219,6 +222,8 @@ function normalizar(texto) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 }
+
+/* ================= PROCESSAR FLUXO ================= */
 
 async function processarFluxo(frase) {
 
@@ -253,20 +258,53 @@ async function processarFluxo(frase) {
     let listaProdutos = [];
 
     for (const produto in consumoMedio) {
+
       if (frase.includes(produto)) {
 
-        let quantidade =
-          consumoMedio[produto] *
-          fluxo.pessoas *
-          fluxo.dias;
+        const consumoPessoaDia = consumoMedio[produto];
+        const totalNecessario =
+          consumoPessoaDia * fluxo.pessoas * fluxo.dias;
 
-        quantidade = produto === "pao"
-          ? Math.ceil(quantidade)
-          : parseFloat(quantidade.toFixed(2));
+        let quantidadeCompra = 0;
+        let detalhe = "";
+
+        if (["arroz","feijao","macarrao","carne"].includes(produto)) {
+
+          quantidadeCompra = Math.ceil(totalNecessario);
+
+          detalhe = `
+            Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
+            Total necessário: ${totalNecessario.toFixed(2)} kg<br>
+            <strong>Sugestão de compra: ${quantidadeCompra} kg</strong>
+          `;
+        }
+
+        else if (produto === "leite") {
+
+          quantidadeCompra = Math.ceil(totalNecessario);
+
+          detalhe = `
+            Consumo médio: ${consumoPessoaDia.toFixed(2)}L por pessoa/dia<br>
+            Total necessário: ${totalNecessario.toFixed(2)} litros<br>
+            <strong>Sugestão de compra: ${quantidadeCompra} litros</strong>
+          `;
+        }
+
+        else if (produto === "pao") {
+
+          quantidadeCompra = Math.ceil(totalNecessario);
+
+          detalhe = `
+            Consumo médio: ${consumoPessoaDia} unidades por pessoa/dia<br>
+            Total necessário: ${totalNecessario} unidades<br>
+            <strong>Sugestão de compra: ${quantidadeCompra} unidades</strong>
+          `;
+        }
 
         listaProdutos.push({
           nome: produto,
-          quantidade
+          quantidade: quantidadeCompra,
+          detalhe
         });
       }
     }
