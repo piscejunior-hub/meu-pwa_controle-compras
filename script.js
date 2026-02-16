@@ -270,24 +270,29 @@ async function processarFluxo(frase) {
 
         if (["arroz","feijao","macarrao","carne"].includes(produto)) {
 
-  // Detectar se foi informado pacote com peso
-  const matchPacote = frase.match(/(\d+)\s*(quilo|quilos|kg)/);
+  // Criar regex específica para cada produto
+  const regexProduto = new RegExp(
+    produto + "\\s*(?:pacote\\s*de\\s*)?(\\d+)\\s*(kg|quilo|quilos)?"
+  );
 
-  if (matchPacote) {
+  const matchProduto = frase.match(regexProduto);
 
-    const pesoPacote = parseInt(matchPacote[1]);
+  let pesoPacote = null;
 
-    if (pesoPacote > 0) {
+  if (matchProduto && matchProduto[1] && matchProduto[2]) {
+    pesoPacote = parseInt(matchProduto[1]);
+  }
 
-      quantidadeCompra = Math.ceil(totalNecessario / pesoPacote);
+  if (pesoPacote && pesoPacote > 0) {
 
-      detalhe = `
-        Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
-        Total necessário: ${totalNecessario.toFixed(2)} kg<br>
-        Pacote informado: ${pesoPacote} kg<br>
-        <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote}kg</strong>
-      `;
-    }
+    quantidadeCompra = Math.ceil(totalNecessario / pesoPacote);
+
+    detalhe = `
+      Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
+      Total necessário: ${totalNecessario.toFixed(2)} kg<br>
+      Pacote informado: ${pesoPacote} kg<br>
+      <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote}kg</strong>
+    `;
 
   } else {
 
