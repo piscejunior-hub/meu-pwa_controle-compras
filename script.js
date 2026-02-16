@@ -6,6 +6,16 @@ const STORE_ITENS = "itens";
 
 let db;
 
+/* ================= CONFIG FINANCEIRA (NOVO) ================= */
+
+let configuracoes = {
+  orcamento: 0,
+  deslocamento: 0
+};
+
+
+
+
 /* ================= INIT DB ================= */
 
 function initDB() {
@@ -70,6 +80,25 @@ function getItems() {
   });
 }
 
+function atualizarFinanceiro() {
+
+  const elOrc = document.getElementById("orcamento");
+  const elDes = document.getElementById("deslocamento");
+
+  if (elOrc) {
+    elOrc.innerText = "R$ " + configuracoes.orcamento.toFixed(2);
+  }
+
+  if (elDes) {
+    elDes.innerText = "R$ " + configuracoes.deslocamento.toFixed(2);
+  }
+}
+
+
+
+
+
+
 /* ================= RENDER CARRINHO ================= */
 
 async function renderList() {
@@ -95,8 +124,21 @@ async function renderList() {
     lista.appendChild(li);
   });
 
-  totalEl.innerText = "R$ " + total.toFixed(2);
+
+ // 🔹 SOMANDO DESLOCAMENTO (NOVO)
+  const totalFinal = total + configuracoes.deslocamento;
+totalEl.innerText = "R$ " + totalFinal.toFixed(2);;
 }
+
+ // 🔹 ALERTA DE ORÇAMENTO (NOVO)
+
+if (configuracoes.orcamento > 0 && totalFinal > configuracoes.orcamento) {
+  falar("Atenção. Você ultrapassou o orçamento.");
+}
+
+
+
+
 
 /* ================= CONSUMO ================= */
 
@@ -380,15 +422,46 @@ function startVoice() {
       document.getElementById("status").innerText =
         "Você disse: " + frase;
 
-      if (fluxo.ativo) {
-        await processarFluxo(frase);
-        return;
-      }
+      // ===== ORÇAMENTO =====
+  if (fraseNormalizada.includes("orcamento")) {
 
-      if (normalizar(frase).includes("iniciar compra")) {
-        iniciarFluxo();
-      }
-    };
+    const valor = frase.match(/\d+[.,]?\d*/);
+
+    if (valor) {
+      configuracoes.orcamento =
+        parseFloat(valor[0].replace(",", "."));
+
+      atualizarFinanceiro();
+      falar("Orçamento atualizado.");
+    }
+    return;
+  }
+
+  // ===== DESLOCAMENTO =====
+  if (fraseNormalizada.includes("deslocamento")) {
+
+    const valor = frase.match(/\d+[.,]?\d*/);
+
+    if (valor) {
+      configuracoes.deslocamento =
+        parseFloat(valor[0].replace(",", "."));
+
+      atualizarFinanceiro();
+      renderList();
+      falar("Deslocamento atualizado.");
+    }
+    return;
+  }
+
+  if (fluxo.ativo) {
+    await processarFluxo(frase);
+    return;
+  }
+
+  if (fraseNormalizada.includes("iniciar compra")) {
+    iniciarFluxo();
+  }
+};
 
     recognition.onend = () => {
       if (ouvindo) {
