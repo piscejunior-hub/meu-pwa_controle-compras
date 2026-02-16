@@ -13,9 +13,6 @@ let configuracoes = {
   deslocamento: 0
 };
 
-
-
-
 /* ================= INIT DB ================= */
 
 function initDB() {
@@ -80,24 +77,15 @@ function getItems() {
   });
 }
 
-function atualizarFinanceiro() {
+/* ================= ATUALIZAR FINANCEIRO (NOVO) ================= */
 
+function atualizarFinanceiro() {
   const elOrc = document.getElementById("orcamento");
   const elDes = document.getElementById("deslocamento");
 
-  if (elOrc) {
-    elOrc.innerText = "R$ " + configuracoes.orcamento.toFixed(2);
-  }
-
-  if (elDes) {
-    elDes.innerText = "R$ " + configuracoes.deslocamento.toFixed(2);
-  }
+  if (elOrc) elOrc.innerText = "R$ " + configuracoes.orcamento.toFixed(2);
+  if (elDes) elDes.innerText = "R$ " + configuracoes.deslocamento.toFixed(2);
 }
-
-
-
-
-
 
 /* ================= RENDER CARRINHO ================= */
 
@@ -124,21 +112,15 @@ async function renderList() {
     lista.appendChild(li);
   });
 
-
- // 🔹 SOMANDO DESLOCAMENTO (NOVO)
+  // 🔹 SOMANDO DESLOCAMENTO
   const totalFinal = total + configuracoes.deslocamento;
-totalEl.innerText = "R$ " + totalFinal.toFixed(2);;
+  totalEl.innerText = "R$ " + totalFinal.toFixed(2);
+
+  // 🔹 ALERTA DE ORÇAMENTO
+  if (configuracoes.orcamento > 0 && totalFinal > configuracoes.orcamento) {
+    falar("Atenção. Você ultrapassou o orçamento.");
+  }
 }
-
- // 🔹 ALERTA DE ORÇAMENTO (NOVO)
-
-if (configuracoes.orcamento > 0 && totalFinal > configuracoes.orcamento) {
-  falar("Atenção. Você ultrapassou o orçamento.");
-}
-
-
-
-
 
 /* ================= CONSUMO ================= */
 
@@ -173,234 +155,13 @@ function mostrarConsumo(listaProdutos) {
   });
 }
 
-/* ================= PREPARAR COMPRA ================= */
-
-function prepararCompra(nome, quantidade) {
-
-  const form = document.getElementById("formCompra");
-
-  form.innerHTML = `
-    <h3>${nome}</h3>
-    <p><strong>Quantidade sugerida:</strong> ${quantidade}</p>
-
-    <label>Quantidade que vai comprar:</label>
-    <input type="number" id="qtdCompra" value="${quantidade}" min="0" step="0.01">
-
-    <label>Preço unitário:</label>
-    <input type="number" id="precoCompra" step="0.01" min="0">
-
-    <button onclick="confirmarCompra('${nome}')">
-      Confirmar Compra
-    </button>
-  `;
-}
-
-/* ================= CONFIRMAR COMPRA ================= */
-
-async function confirmarCompra(nome) {
-
-  const qtd = parseFloat(document.getElementById("qtdCompra").value);
-  const preco = parseFloat(document.getElementById("precoCompra").value);
-
-  if (isNaN(qtd) || isNaN(preco) || qtd <= 0 || preco <= 0) {
-    alert("Informe quantidade e preço válidos.");
-    return;
-  }
-
-  await addItem(nome, qtd, preco);
-  await renderList();
-
-  document.getElementById("formCompra").innerHTML =
-    "<p style='color:#aaa;'>Compra adicionada!</p>";
-
-  falar("Produto adicionado ao carrinho.");
-}
-
-/* ================= FLUXO ================= */
-
-let fluxo = {
-  ativo: false,
-  etapa: 0,
-  dias: 0,
-  pessoas: 0
-};
-
-async function iniciarFluxo() {
-
-  await limparCarrinho();
-  await renderList();
-
-  document.getElementById("listaConsumo").innerHTML = "";
-  document.getElementById("formCompra").innerHTML = "";
-
-  fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
-
-  falar("Compra para quantos dias?");
-  document.getElementById("status").innerText = "Compra para quantos dias?";
-}
-
-/* ================= NUMEROS ================= */
-
-const numerosExtenso = {
-  um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
-  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
-};
-
-function extrairNumero(texto) {
-  const numeroDigito = texto.match(/\d+/);
-  if (numeroDigito) return parseInt(numeroDigito[0]);
-
-  for (let palavra in numerosExtenso) {
-    if (texto.includes(palavra)) {
-      return numerosExtenso[palavra];
-    }
-  }
-  return null;
-}
-
-function normalizar(texto) {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
-/* ================= PROCESSAR FLUXO ================= */
-
-async function processarFluxo(frase) {
-
-  frase = normalizar(frase);
-
-  if (fluxo.etapa === 1) {
-    const dias = extrairNumero(frase);
-    if (!dias || dias <= 0) {
-      falar("Não entendi os dias.");
-      return;
-    }
-    fluxo.dias = dias;
-    fluxo.etapa = 2;
-    falar("Quantas pessoas?");
-    return;
-  }
-
-  if (fluxo.etapa === 2) {
-    const pessoas = extrairNumero(frase);
-    if (!pessoas || pessoas <= 0) {
-      falar("Não entendi as pessoas.");
-      return;
-    }
-    fluxo.pessoas = pessoas;
-    fluxo.etapa = 3;
-    falar("Quais produtos deseja comprar?");
-    return;
-  }
-
-  if (fluxo.etapa === 3) {
-
-    let listaProdutos = [];
-
-    for (const produto in consumoMedio) {
-
-      if (frase.includes(produto)) {
-
-        const consumoPessoaDia = consumoMedio[produto];
-        const totalNecessario =
-          consumoPessoaDia * fluxo.pessoas * fluxo.dias;
-
-        let quantidadeCompra = 0;
-        let detalhe = "";
-
-        if (["arroz","feijao","macarrao","carne"].includes(produto)) {
-
-  // Criar regex específica para cada produto
-  const regexProduto = new RegExp(
-    produto + "\\s*(?:pacote\\s*de\\s*)?(\\d+)\\s*(kg|quilo|quilos)?"
-  );
-
-  const matchProduto = frase.match(regexProduto);
-
-  let pesoPacote = null;
-
-  if (matchProduto && matchProduto[1] && matchProduto[2]) {
-    pesoPacote = parseInt(matchProduto[1]);
-  }
-
-  if (pesoPacote && pesoPacote > 0) {
-
-    quantidadeCompra = Math.ceil(totalNecessario / pesoPacote);
-
-    detalhe = `
-      Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
-      Total necessário: ${totalNecessario.toFixed(2)} kg<br>
-      Pacote informado: ${pesoPacote} kg<br>
-      <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote}kg</strong>
-    `;
-
-  } else {
-
-    quantidadeCompra = Math.ceil(totalNecessario);
-
-    detalhe = `
-      Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
-      Total necessário: ${totalNecessario.toFixed(2)} kg<br>
-      <strong>Sugestão de compra: ${quantidadeCompra} kg</strong>
-    `;
-  }
-}
-
-
-        else if (produto === "leite") {
-
-          quantidadeCompra = Math.ceil(totalNecessario);
-
-          detalhe = `
-            Consumo médio: ${consumoPessoaDia.toFixed(2)}L por pessoa/dia<br>
-            Total necessário: ${totalNecessario.toFixed(2)} litros<br>
-            <strong>Sugestão de compra: ${quantidadeCompra} litros</strong>
-          `;
-        }
-
-        else if (produto === "pao") {
-
-          quantidadeCompra = Math.ceil(totalNecessario);
-
-          detalhe = `
-            Consumo médio: ${consumoPessoaDia} unidades por pessoa/dia<br>
-            Total necessário: ${totalNecessario} unidades<br>
-            <strong>Sugestão de compra: ${quantidadeCompra} unidades</strong>
-          `;
-        }
-
-        listaProdutos.push({
-          nome: produto,
-          quantidade: quantidadeCompra,
-          detalhe
-        });
-      }
-    }
-
-    if (listaProdutos.length === 0) {
-      falar("Nenhum produto reconhecido.");
-      return;
-    }
-
-    mostrarConsumo(listaProdutos);
-    falar("Cálculo concluído.");
-
-    fluxo.ativo = false;
-    fluxo.etapa = 0;
-  }
-}
-
 /* ================= VOZ ================= */
 
 let recognition = null;
 let ouvindo = false;
 
 function startVoice() {
-
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
     alert("Use o Google Chrome.");
@@ -408,60 +169,49 @@ function startVoice() {
   }
 
   if (!recognition) {
-
     recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
     recognition.continuous = true;
     recognition.interimResults = false;
 
     recognition.onresult = async (event) => {
+      const frase = event.results[event.results.length - 1][0].transcript;
+      const fraseNormalizada = normalizar(frase);
 
-      const frase =
-        event.results[event.results.length - 1][0].transcript;
-
-      document.getElementById("status").innerText =
-        "Você disse: " + frase;
+      document.getElementById("status").innerText = "Você disse: " + frase;
 
       // ===== ORÇAMENTO =====
-  if (fraseNormalizada.includes("orcamento")) {
+      if (fraseNormalizada.includes("orcamento")) {
+        const valor = frase.match(/\d+[.,]?\d*/);
+        if (valor) {
+          configuracoes.orcamento = parseFloat(valor[0].replace(",", "."));
+          atualizarFinanceiro();
+          falar("Orçamento atualizado.");
+        }
+        return;
+      }
 
-    const valor = frase.match(/\d+[.,]?\d*/);
+      // ===== DESLOCAMENTO =====
+      if (fraseNormalizada.includes("deslocamento")) {
+        const valor = frase.match(/\d+[.,]?\d*/);
+        if (valor) {
+          configuracoes.deslocamento = parseFloat(valor[0].replace(",", "."));
+          atualizarFinanceiro();
+          await renderList();
+          falar("Deslocamento atualizado.");
+        }
+        return;
+      }
 
-    if (valor) {
-      configuracoes.orcamento =
-        parseFloat(valor[0].replace(",", "."));
+      if (fluxo.ativo) {
+        await processarFluxo(frase);
+        return;
+      }
 
-      atualizarFinanceiro();
-      falar("Orçamento atualizado.");
-    }
-    return;
-  }
-
-  // ===== DESLOCAMENTO =====
-  if (fraseNormalizada.includes("deslocamento")) {
-
-    const valor = frase.match(/\d+[.,]?\d*/);
-
-    if (valor) {
-      configuracoes.deslocamento =
-        parseFloat(valor[0].replace(",", "."));
-
-      atualizarFinanceiro();
-      renderList();
-      falar("Deslocamento atualizado.");
-    }
-    return;
-  }
-
-  if (fluxo.ativo) {
-    await processarFluxo(frase);
-    return;
-  }
-
-  if (fraseNormalizada.includes("iniciar compra")) {
-    iniciarFluxo();
-  }
-};
+      if (fraseNormalizada.includes("iniciar compra")) {
+        iniciarFluxo();
+      }
+    };
 
     recognition.onend = () => {
       if (ouvindo) {
@@ -474,8 +224,8 @@ function startVoice() {
     recognition.start();
     ouvindo = true;
   } else {
-    ouvindo = false;
     recognition.stop();
+    ouvindo = false;
   }
 }
 
@@ -485,4 +235,3 @@ window.onload = async () => {
   await initDB();
   await renderList();
 };
-
