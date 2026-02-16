@@ -1,181 +1,348 @@
-/* ================= ESTADO ================= */
+/* ================= CONFIG BANCO ================= */
 
-let carrinho = [];
-let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
-let total = 0;
+const DB_NAME = "comprasDB";
+const DB_VERSION = 7;
+const STORE_ITENS = "itens";
 
-/* ================= ELEMENTOS ================= */
+let db;
 
-const lista = document.getElementById("lista");
-const totalEl = document.getElementById("total");
-const orcamentoEl = document.getElementById("orcamento");
-const deslocamentoEl = document.getElementById("deslocamento");
-const listaConsumo = document.getElementById("listaConsumo");
-const formCompra = document.getElementById("formCompra");
-const status = document.getElementById("status");
+/* ================= INIT DB ================= */
 
-/* ================= SALVAR ================= */
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-function salvarProdutos() {
-  localStorage.setItem("produtos", JSON.stringify(produtos));
+    request.onerror = () => reject(request.error);
+
+    request.onsuccess = () => {
+      db = request.result;
+      resolve();
+    };
+
+    request.onupgradeneeded = (event) => {
+      db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_ITENS)) {
+        db.createObjectStore(STORE_ITENS, {
+          keyPath: "id",
+          autoIncrement: true
+        });
+      }
+    };
+  });
 }
 
-/* ================= ATUALIZAR TELA ================= */
+/* ================= LIMPAR CARRINHO ================= */
 
-function atualizarTela() {
+function limparCarrinho() {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    tx.objectStore(STORE_ITENS).clear().onsuccess = resolve;
+  });
+}
+
+/* ================= FALAR ================= */
+
+function falar(texto) {
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(texto);
+  utterance.lang = "pt-BR";
+  speechSynthesis.speak(utterance);
+}
+
+/* ================= CRUD ================= */
+
+function addItem(nome, quantidade, preco) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    tx.objectStore(STORE_ITENS).add({
+      nome,
+      quantidade,
+      preco
+    }).onsuccess = resolve;
+  });
+}
+
+function getItems() {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_ITENS, "readonly");
+    tx.objectStore(STORE_ITENS).getAll()
+      .onsuccess = e => resolve(e.target.result || []);
+  });
+}
+
+/* ================= RENDER CARRINHO ================= */
+
+async function renderList() {
+  const lista = document.getElementById("lista");
+  const totalEl = document.getElementById("total");
+
   lista.innerHTML = "";
-  total = 0;
 
-  carrinho.forEach((item, index) => {
-    total += item.preco;
+  const itens = await getItems();
+  let total = 0;
+
+  itens.forEach(item => {
+    const subtotal = item.quantidade * item.preco;
+    total += subtotal;
 
     const li = document.createElement("li");
     li.innerHTML = `
-      ${item.nome} (${item.unidade}) - R$ ${item.preco.toFixed(2)}
-      <button onclick="removerItem(${index})">❌</button>
+      <strong>${item.nome}</strong><br>
+      Qtd: ${item.quantidade} |
+      Preço: R$ ${item.preco.toFixed(2)} |
+      Subtotal: R$ ${subtotal.toFixed(2)}
     `;
     lista.appendChild(li);
   });
 
-  totalEl.textContent = "R$ " + total.toFixed(2);
+  totalEl.innerText = "R$ " + total.toFixed(2);
 }
 
-function removerItem(index) {
-  carrinho.splice(index, 1);
-  atualizarTela();
+/* ================= CONSUMO ================= */
+
+const consumoMedio = {
+  arroz: 0.08,
+  feijao: 0.05,
+  leite: 0.2,
+  pao: 2,
+  macarrao: 0.07,
+  carne: 0.15
+};
+
+function mostrarConsumo(listaProdutos) {
+  const container = document.getElementById("listaConsumo");
+  container.innerHTML = "";
+
+  listaProdutos.forEach(item => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <strong>${item.nome}</strong><br>
+      Quantidade recomendada: ${item.quantidade}<br>
+      <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
+        Comprar
+      </button>
+    `;
+    container.appendChild(div);
+  });
 }
 
-/* ================= NOVA COMPRA ================= */
+/* ================= PREPARAR COMPRA ================= */
 
-function novaCompra() {
-  carrinho = [];
-  atualizarTela();
-  orcamentoEl.textContent = "R$ 0,00";
-  deslocamentoEl.textContent = "R$ 0,00";
+function prepararCompra(nome, quantidade) {
+
+  const form = document.getElementById("formCompra");
+
+  form.innerHTML = `
+    <h3>${nome}</h3>
+    <p>Quantidade recomendada: ${quantidade}</p>
+
+    <label>Quantidade que vai comprar:</label>
+    <input type="number" id="qtdCompra" value="${quantidade}" min="0">
+
+    <label>Preço unitário:</label>
+    <input type="number" id="precoCompra" step="0.01" min="0">
+
+    <button onclick="confirmarCompra('${nome}')">
+      Confirmar Compra
+    </button>
+  `;
+}
+
+/* ================= CONFIRMAR COMPRA ================= */
+
+async function confirmarCompra(nome) {
+
+  const qtd = parseFloat(document.getElementById("qtdCompra").value);
+  const preco = parseFloat(document.getElementById("precoCompra").value);
+
+  if (isNaN(qtd) || isNaN(preco) || qtd <= 0 || preco <= 0) {
+    alert("Informe quantidade e preço válidos.");
+    return;
+  }
+
+  await addItem(nome, qtd, preco);
+  await renderList();
+
+  document.getElementById("formCompra").innerHTML =
+    "<p style='color:#aaa;'>Compra adicionada!</p>";
+
+  falar("Produto adicionado ao carrinho.");
+}
+
+/* ================= FLUXO ================= */
+
+let fluxo = {
+  ativo: false,
+  etapa: 0,
+  dias: 0,
+  pessoas: 0
+};
+
+async function iniciarFluxo() {
+
+  // 🔥 LIMPA TUDO AO INICIAR NOVA COMPRA
+  await limparCarrinho();
+  await renderList();
+
+  document.getElementById("listaConsumo").innerHTML = "";
+  document.getElementById("formCompra").innerHTML = "";
+
+  fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
+
+  falar("Compra para quantos dias?");
+  document.getElementById("status").innerText = "Compra para quantos dias?";
+}
+
+/* ================= NUMEROS ================= */
+
+const numerosExtenso = {
+  um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
+  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
+};
+
+function extrairNumero(texto) {
+  const numeroDigito = texto.match(/\d+/);
+  if (numeroDigito) return parseInt(numeroDigito[0]);
+
+  for (let palavra in numerosExtenso) {
+    if (texto.includes(palavra)) {
+      return numerosExtenso[palavra];
+    }
+  }
+
+  return null;
+}
+
+function normalizar(texto) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+async function processarFluxo(frase) {
+
+  frase = normalizar(frase);
+
+  if (fluxo.etapa === 1) {
+    const dias = extrairNumero(frase);
+    if (!dias || dias <= 0) {
+      falar("Não entendi os dias.");
+      return;
+    }
+    fluxo.dias = dias;
+    fluxo.etapa = 2;
+    falar("Quantas pessoas?");
+    return;
+  }
+
+  if (fluxo.etapa === 2) {
+    const pessoas = extrairNumero(frase);
+    if (!pessoas || pessoas <= 0) {
+      falar("Não entendi as pessoas.");
+      return;
+    }
+    fluxo.pessoas = pessoas;
+    fluxo.etapa = 3;
+    falar("Quais produtos deseja comprar?");
+    return;
+  }
+
+  if (fluxo.etapa === 3) {
+
+    let listaProdutos = [];
+
+    for (const produto in consumoMedio) {
+      if (frase.includes(produto)) {
+
+        let quantidade =
+          consumoMedio[produto] *
+          fluxo.pessoas *
+          fluxo.dias;
+
+        quantidade = produto === "pao"
+          ? Math.ceil(quantidade)
+          : parseFloat(quantidade.toFixed(2));
+
+        listaProdutos.push({
+          nome: produto,
+          quantidade
+        });
+      }
+    }
+
+    if (listaProdutos.length === 0) {
+      falar("Nenhum produto reconhecido.");
+      return;
+    }
+
+    mostrarConsumo(listaProdutos);
+    falar("Cálculo concluído.");
+
+    fluxo.ativo = false;
+    fluxo.etapa = 0;
+  }
 }
 
 /* ================= VOZ ================= */
 
-let recognition;
+let recognition = null;
+let ouvindo = false;
 
 function startVoice() {
 
-  if (!('webkitSpeechRecognition' in window)) {
-    alert("Seu navegador não suporta reconhecimento de voz.");
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("Use o Google Chrome.");
     return;
   }
 
-  recognition = new webkitSpeechRecognition();
-  recognition.lang = "pt-BR";
-  recognition.continuous = false;
-  recognition.interimResults = false;
+  if (!recognition) {
 
-  recognition.start();
-  status.textContent = "🎤 Ouvindo...";
+    recognition = new SpeechRecognition();
+    recognition.lang = "pt-BR";
+    recognition.continuous = true;
+    recognition.interimResults = false;
 
-  recognition.onresult = function(event) {
-    const texto = event.results[0][0].transcript.toLowerCase();
-    status.textContent = "Você disse: " + texto;
-    interpretarComando(texto);
-  };
+    recognition.onresult = async (event) => {
 
-  recognition.onend = function() {
-    status.textContent = "Pronto para ouvir...";
-  };
-}
+      const frase =
+        event.results[event.results.length - 1][0].transcript;
 
-/* ================= INTELIGÊNCIA DE COMANDO ================= */
+      document.getElementById("status").innerText =
+        "Você disse: " + frase;
 
-function interpretarComando(texto) {
-
-  // NOVA COMPRA
-  if (texto.includes("nova compra")) {
-    novaCompra();
-    return;
-  }
-
-  // CADASTRAR PRODUTO
-  // exemplo: cadastrar arroz unidade quilo
-  if (texto.includes("cadastrar")) {
-
-    let partes = texto.replace("cadastrar", "").trim();
-    let palavras = partes.split(" ");
-
-    let nome = palavras[0];
-    let unidade = "un";
-
-    if (texto.includes("quilo") || texto.includes("kg")) unidade = "kg";
-    if (texto.includes("litro")) unidade = "litro";
-    if (texto.includes("pacote")) unidade = "pacote";
-
-    produtos.push({
-      nome: nome,
-      unidade: unidade
-    });
-
-    salvarProdutos();
-    alert("Produto cadastrado: " + nome);
-    return;
-  }
-
-  // ADICIONAR AO CARRINHO
-  // exemplo: adicionar arroz 25 reais
-  if (texto.includes("adicionar")) {
-
-    let nomeEncontrado = null;
-
-    produtos.forEach(prod => {
-      if (texto.includes(prod.nome)) {
-        nomeEncontrado = prod;
+      if (fluxo.ativo) {
+        await processarFluxo(frase);
+        return;
       }
-    });
 
-    if (!nomeEncontrado) {
-      alert("Produto não cadastrado.");
-      return;
-    }
+      if (normalizar(frase).includes("iniciar compra")) {
+        iniciarFluxo();
+      }
+    };
 
-    let numero = texto.match(/\d+([.,]\d+)?/);
+    recognition.onend = () => {
+      if (ouvindo) {
+        try { recognition.start(); } catch (e) {}
+      }
+    };
+  }
 
-    if (!numero) {
-      alert("Fale também o preço.");
-      return;
-    }
-
-    let preco = parseFloat(numero[0].replace(",", "."));
-
-    carrinho.push({
-      nome: nomeEncontrado.nome,
-      unidade: nomeEncontrado.unidade,
-      preco: preco
-    });
-
-    atualizarTela();
-    alert("Adicionado ao carrinho!");
-    return;
+  if (!ouvindo) {
+    recognition.start();
+    ouvindo = true;
+  } else {
+    ouvindo = false;
+    recognition.stop();
   }
 }
 
-/* ================= CARREGAR PRODUTOS NA TELA ================= */
+/* ================= START ================= */
 
-function carregarConsumo() {
-  listaConsumo.innerHTML = "";
-
-  if (produtos.length === 0) {
-    listaConsumo.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado</p>";
-    return;
-  }
-
-  produtos.forEach(prod => {
-    const div = document.createElement("div");
-    div.innerHTML = `
-      <strong>${prod.nome}</strong> (${prod.unidade})
-    `;
-    listaConsumo.appendChild(div);
-  });
-}
-
-/* ================= INICIAR ================= */
-
-carregarConsumo();
-atualizarTela();
+window.onload = async () => {
+  await initDB();
+  await renderList();
+};
