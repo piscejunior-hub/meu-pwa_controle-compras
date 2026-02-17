@@ -558,13 +558,13 @@ function mostrarAba(id) {
     aba.style.display = "block";
   }
 
-  // 🔥 FECHA O MENU
-  fecharMenu();
-}
-
+  // Se for aba de produtos, carrega a lista
   if (id === "abaProdutos") {
     carregarProdutosNaAba();
   }
+
+  // Fecha o menu lateral
+  fecharMenu();
 }
 
 async function carregarProdutosNaAba() {
@@ -584,11 +584,6 @@ async function carregarProdutosNaAba() {
     `;
   });
 }
-
-
-
-
-
 
 /* ================= START ================= */
 
