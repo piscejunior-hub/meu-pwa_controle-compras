@@ -548,12 +548,19 @@ function fecharMenu() {
 
 function mostrarAba(id) {
 
+  // Esconde todas as abas laterais
   document.querySelectorAll(".aba-lateral")
     .forEach(el => el.style.display = "none");
 
-  document.getElementById(id).style.display = "block";
+  // Mostra a aba selecionada
+  const aba = document.getElementById(id);
+  if (aba) {
+    aba.style.display = "block";
+  }
 
+  // 🔥 FECHA O MENU
   fecharMenu();
+}
 
   if (id === "abaProdutos") {
     carregarProdutosNaAba();
