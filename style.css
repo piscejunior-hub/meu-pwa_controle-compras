@@ -260,3 +260,63 @@ button,
 input {
   touch-action: manipulation;
 }
+
+/* ================= Menu ================= */
+
+#menuBtn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  font-size: 22px;
+  background: #2c3e50;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  z-index: 1000;
+}
+
+.menu-lateral {
+  position: fixed;
+  left: -260px;
+  top: 0;
+  width: 250px;
+  height: 100%;
+  background: #34495e;
+  color: white;
+  padding: 20px;
+  transition: 0.3s;
+  z-index: 999;
+}
+
+.menu-lateral button {
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  border: none;
+  background: #2c3e50;
+  color: white;
+  border-radius: 5px;
+}
+
+.fechar-menu {
+  background: red;
+}
+
+.aba-lateral {
+  display: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 90%;
+  height: 100%;
+  background: white;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 998;
+}
+
+.guia-item {
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
