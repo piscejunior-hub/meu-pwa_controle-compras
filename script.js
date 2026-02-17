@@ -8,6 +8,11 @@ const STORE_PRODUTOS = "produtos";
 
 let db;
 
+/* ================= CONTROLE VOZ GLOBAL ================= */
+
+let ultimaFraseGlobal = "";
+let bloqueioVoz = false;
+
 /* ================= INIT DB ================= */
 
 function initDB() {
@@ -478,26 +483,42 @@ function startVoice() {
 
     recognition.onresult = async (event) => {
 
-      const frase =
-        event.results[event.results.length - 1][0].transcript;
+  const fraseOriginal =
+    event.results[event.results.length - 1][0].transcript;
 
-      document.getElementById("status").innerText =
-        "Você disse: " + frase;
+  const frase = normalizar(fraseOriginal);
 
-      const cadastrado =
-        await processarCadastroPorVoz(frase);
+  document.getElementById("status").innerText =
+    "Você disse: " + fraseOriginal;
 
-      if (cadastrado) return;
+  // 🔒 BLOQUEIO GLOBAL CONTRA DUPLICAÇÃO
+  if (bloqueioVoz) return;
 
-      if (fluxo.ativo) {
-        await processarFluxo(frase);
-        return;
-      }
+  if (frase === ultimaFraseGlobal) return;
 
-      if (normalizar(frase).includes("iniciar compra")) {
-        iniciarFluxo();
-      }
-    };
+  bloqueioVoz = true;
+  ultimaFraseGlobal = frase;
+
+  setTimeout(() => {
+    bloqueioVoz = false;
+  }, 1500);
+
+  // ================= EXECUÇÃO NORMAL =================
+
+  const cadastrado =
+    await processarCadastroPorVoz(fraseOriginal);
+
+  if (cadastrado) return;
+
+  if (fluxo.ativo) {
+    await processarFluxo(fraseOriginal);
+    return;
+  }
+
+  if (frase.includes("iniciar compra")) {
+    iniciarFluxo();
+  }
+};
 
     recognition.onend = () => {
       if (ouvindo) {
@@ -522,4 +543,5 @@ window.onload = async () => {
   await renderList();
   await renderProdutos();
 };
+
 
