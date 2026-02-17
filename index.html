@@ -192,17 +192,19 @@
 
 <!-- ABAS LATERAIS -->
 
+<!-- ABA PRODUTOS CADASTRADOS -->
+<div id="abaProdutos" class="aba-lateral">
+  <h2>📦 Produtos Cadastrados</h2>
+  <div id="listaProdutosAba"></div>
+</div>
+
 <!-- ABA CONSULTA / EDIÇÃO -->
 <div id="abaConsultarProdutos" class="aba-lateral">
   <h2>🔍 Consultar / Editar Produtos</h2>
   <div id="listaConsultarProdutos"></div>
 </div>
 
-<!-- ABA GUIA DE CONSUMO -->
-<div id="abaGuia" class="aba-lateral">
-  <h2>Guia de Consumo Diário (por pessoa)</h2>
-
-  <!-- GRÃOS, CARNES, LATICÍNIOS, VERDURAS, FRUTAS, INDUSTRIALIZADOS, BEBIDAS -->
+<!-- GRÃOS, CARNES, LATICÍNIOS, VERDURAS, FRUTAS, INDUSTRIALIZADOS, BEBIDAS -->
   <div class="guia-item"><strong>Arroz</strong> – 0.10 quilo</div>
   <div class="guia-item"><strong>Feijão</strong> – 0.08 quilo</div>
   <div class="guia-item"><strong>Macarrão</strong> – 0.10 quilo</div>
@@ -276,13 +278,14 @@
   <div class="guia-item"><strong>Água</strong> – 2 litro</div>
   <div class="guia-item"><strong>Suco natural</strong> – 0.25 litro</div>
   <div class="guia-item"><strong>Refrigerante</strong> – 0.20 litro</div>
+
 </div>
 
 <script>
   // ================= VOICE =================
   const voiceBtn = document.getElementById("voiceBtn");
   voiceBtn.addEventListener("click", () => {
-    startVoice();
+    startVoice?.();
     if (!voiceBtn.classList.contains("stop")) {
       voiceBtn.classList.add("stop");
       voiceBtn.textContent = "🛑 Parar";
@@ -316,21 +319,32 @@
   function atualizarListaProdutos() {
     const lista = document.getElementById("listaProdutos");
     const listaConsulta = document.getElementById("listaConsultarProdutos");
+    const listaAba = document.getElementById("listaProdutosAba");
+
     if (produtos.length === 0) {
       lista.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado...</p>";
       listaConsulta.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado...</p>";
+      listaAba.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado...</p>";
       return;
     }
+
     lista.innerHTML = "";
     listaConsulta.innerHTML = "";
+    listaAba.innerHTML = "";
+
     produtos.forEach((p, i) => {
       const item = document.createElement("p");
       item.textContent = `${p.nome} – ${p.consumo} ${p.tipo}`;
       lista.appendChild(item);
+
       const itemConsulta = document.createElement("div");
       itemConsulta.style.marginBottom = "5px";
       itemConsulta.innerHTML = `${p.nome} – ${p.consumo} ${p.tipo} <button onclick="excluirProduto(${i})">❌</button>`;
       listaConsulta.appendChild(itemConsulta);
+
+      const itemAba = document.createElement("p");
+      itemAba.textContent = `${p.nome} – ${p.consumo} ${p.tipo}`;
+      listaAba.appendChild(itemAba);
     });
   }
 
@@ -347,7 +361,8 @@
   function mostrarAba(id) {
     const abas = document.querySelectorAll(".aba-lateral");
     abas.forEach(a => a.style.display = "none");
-    document.getElementById(id).style.display = "block";
+    const aba = document.getElementById(id);
+    if (aba) aba.style.display = "block";
     fecharMenu();
   }
 
