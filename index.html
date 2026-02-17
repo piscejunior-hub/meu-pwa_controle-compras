@@ -61,6 +61,36 @@
       </div>
     </div>
 
+    <!-- 🔥 NOVO CARD CADASTRO DE PRODUTOS -->
+    <div class="card">
+      <h3>➕ Cadastrar Produto</h3>
+
+      <label>Nome do Produto</label>
+      <input id="nomeProduto" type="text" placeholder="Ex: arroz">
+
+      <label>Consumo por pessoa/dia</label>
+      <input id="consumoProduto" type="number" step="0.01" placeholder="Ex: 0.08">
+
+      <label>Tipo de Medida</label>
+      <select id="tipoProduto">
+        <option value="kg">Quilo (kg)</option>
+        <option value="litro">Litro (L)</option>
+        <option value="unidade">Unidade</option>
+      </select>
+
+      <button onclick="cadastrarProduto()">
+        💾 Salvar Produto
+      </button>
+
+      <hr style="margin:15px 0;">
+
+      <h4>📦 Produtos Cadastrados</h4>
+      <div id="listaProdutos">
+        <p style="color:#aaa;">Nenhum produto cadastrado...</p>
+      </div>
+
+    </div>
+
   </div>
 
 </div>
@@ -68,6 +98,7 @@
 <script src="script.js"></script>
 
 <script>
+
   const voiceBtn = document.getElementById("voiceBtn");
 
   voiceBtn.addEventListener("click", () => {
@@ -87,8 +118,8 @@
       .then(() => console.log("Service Worker registrado"))
       .catch(err => console.error("Erro SW:", err));
   }
+
 </script>
 
 </body>
 </html>
-
