@@ -13,25 +13,16 @@
 <body>
 
 <!-- BOTÃO MENU -->
-<button id="menuBtn" onclick="abrirMenu()">☰</button>
+<button id="menuBtn" onclick="abrirMenu()" style="position:fixed; top:10px; left:10px; z-index:1100;">☰</button>
 
 <!-- MENU LATERAL -->
-<div id="menuLateral" class="menu-lateral">
-  <button class="fechar-menu" onclick="fecharMenu()">✖</button>
+<div id="menuLateral" style="position:fixed; top:0; left:0; height:100%; width:0; overflow-x:hidden; transition:0.3s; background:#f0f0f0; padding-top:60px; z-index:1000;">
+  <button class="fechar-menu" onclick="fecharMenu()" style="position:absolute; top:10px; right:10px;">✖</button>
+  <h2 style="padding-left:15px;">Menu</h2>
 
-  <h2>Menu</h2>
-
-  <button onclick="mostrarAba('abaProdutos')">
-    📦 Produtos Cadastrados
-  </button>
-
-  <button onclick="mostrarAba('abaConsultarProdutos')">
-    🔍 Consultar / Editar Produtos
-  </button>
-
-  <button onclick="mostrarAba('abaGuia')">
-    📊 Guia de Consumo
-  </button>
+  <button onclick="mostrarAba('abaProdutos')" style="width:90%; margin:5px 5%;">📦 Produtos Cadastrados</button>
+  <button onclick="mostrarAba('abaConsultarProdutos')" style="width:90%; margin:5px 5%;">🔍 Consultar / Editar Produtos</button>
+  <button onclick="mostrarAba('abaGuia')" style="width:90%; margin:5px 5%;">📊 Guia de Consumo</button>
 </div>
 
 <h1>🛒 Lista de Compras Inteligente</h1>
@@ -292,3 +283,4 @@
 
 </body>
 </html>
+
