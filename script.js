@@ -400,23 +400,36 @@ function mostrarConsumo(listaProdutos) {
   container.innerHTML = "";
 
   listaProdutos.forEach(item => {
+  const div = document.createElement("div");
+  div.style.marginBottom = "15px";
+  div.style.padding = "10px";
+  div.style.border = "1px solid #ddd";
+  div.style.borderRadius = "8px";
+  div.style.cursor = "pointer"; // indica que é clicável
 
-    const div = document.createElement("div");
+  div.innerHTML = `
+    <strong>${item.nome.toUpperCase()}</strong><br><br>
+    ${item.detalhe}
+    <br><br>
+    <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
+      Comprar
+    </button>
+  `;
 
-    div.innerHTML = `
-      <div style="margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:8px;">
-        <strong>${item.nome.toUpperCase()}</strong><br><br>
-        ${item.detalhe}
-        <br><br>
-        <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
-          Comprar
-        </button>
-      </div>
-    `;
+  // clique no div cadastra direto
+  div.addEventListener("click", (e) => {
+    // previne que o clique no botão "Comprar" acione o cadastro
+    if (e.target.tagName.toLowerCase() === "button") return;
 
-    container.appendChild(div);
+    cadastrarProdutoClicado({
+      nome: item.nome,
+      consumoPessoaDia: item.quantidade, // você pode ajustar se quiser
+      tipo: "unidade" // tipo genérico, se quiser pegar do produto real
+    });
   });
-}
+
+  container.appendChild(div);
+});
 
 /* ================= PREPARAR + CONFIRMAR ================= */
 
