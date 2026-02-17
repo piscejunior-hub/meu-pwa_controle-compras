@@ -31,6 +31,59 @@ function initDB() {
   });
 }
 
+
+/* ================= CONSUMO ================= */
+
+const consumoMedio = {
+
+  // KG
+  arroz: 0.08,
+  feijao: 0.05,
+  macarrao: 0.07,
+  carne: 0.15,
+  frango: 0.18,
+  peixe: 0.12,
+  farinha: 0.04,
+  acucar: 0.03,
+  cafe: 0.02,
+  batata: 0.2,
+  cebola: 0.05,
+  tomate: 0.06,
+  cenoura: 0.05,
+
+  // LITROS
+  leite: 0.2,
+  refrigerante: 0.3,
+  suco: 0.25,
+  agua: 1.5,
+  oleo: 0.02,
+
+  // UNIDADES
+  pao: 2,
+  ovo: 1,
+  banana: 1,
+  maca: 1,
+  iogurte: 1,
+  bolacha: 1
+};
+
+const produtosKG = [
+  "arroz","feijao","macarrao","carne","frango","peixe",
+  "farinha","acucar","cafe","batata","cebola","tomate","cenoura"
+];
+
+const produtosLitro = [
+  "leite","refrigerante","suco","agua","oleo"
+];
+
+const produtosUnidade = [
+  "pao","ovo","banana","maca","iogurte","bolacha"
+];
+
+
+
+
+
 /* ================= LIMPAR CARRINHO ================= */
 
 function limparCarrinho() {
@@ -229,112 +282,127 @@ async function processarFluxo(frase) {
 
   frase = normalizar(frase);
 
+  /* ================= ETAPA 1 ================= */
   if (fluxo.etapa === 1) {
     const dias = extrairNumero(frase);
+
     if (!dias || dias <= 0) {
       falar("Não entendi os dias.");
       return;
     }
+
     fluxo.dias = dias;
     fluxo.etapa = 2;
     falar("Quantas pessoas?");
     return;
   }
 
+  /* ================= ETAPA 2 ================= */
   if (fluxo.etapa === 2) {
     const pessoas = extrairNumero(frase);
+
     if (!pessoas || pessoas <= 0) {
       falar("Não entendi as pessoas.");
       return;
     }
+
     fluxo.pessoas = pessoas;
     fluxo.etapa = 3;
     falar("Quais produtos deseja comprar?");
     return;
   }
 
+  /* ================= ETAPA 3 ================= */
   if (fluxo.etapa === 3) {
 
     let listaProdutos = [];
 
     for (const produto in consumoMedio) {
 
-      if (frase.includes(produto)) {
+      if (!frase.includes(produto)) continue;
 
-        const consumoPessoaDia = consumoMedio[produto];
-        const totalNecessario =
-          consumoPessoaDia * fluxo.pessoas * fluxo.dias;
+      const consumoPessoaDia = consumoMedio[produto];
+      const totalNecessario =
+        consumoPessoaDia * fluxo.pessoas * fluxo.dias;
 
-        let quantidadeCompra = 0;
-        let detalhe = "";
+      let quantidadeCompra = 0;
+      let detalhe = "";
 
-        if (["arroz","feijao","macarrao","carne"].includes(produto)) {
+      // ---------------------------
+      // PRODUTOS EM KG
+      // ---------------------------
+      const produtosKg = ["arroz", "feijao", "macarrao", "carne"];
 
-  // Criar regex específica para cada produto
-  const regexProduto = new RegExp(
-    produto + "\\s*(?:pacote\\s*de\\s*)?(\\d+)\\s*(kg|quilo|quilos)?"
-  );
+      if (produtosKg.includes(produto)) {
 
-  const matchProduto = frase.match(regexProduto);
+        const regex = new RegExp(
+          produto + "\\s*(?:pacote\\s*de\\s*)?(\\d+(?:\\.\\d+)?)\\s*(kg|quilo|quilos)?"
+        );
 
-  let pesoPacote = null;
+        const match = frase.match(regex);
 
-  if (matchProduto && matchProduto[1] && matchProduto[2]) {
-    pesoPacote = parseInt(matchProduto[1]);
-  }
+        let pesoPacote = null;
 
-  if (pesoPacote && pesoPacote > 0) {
+        if (match && match[1]) {
+          pesoPacote = parseFloat(match[1]);
+        }
 
-    quantidadeCompra = Math.ceil(totalNecessario / pesoPacote);
+        if (pesoPacote && pesoPacote > 0) {
 
-    detalhe = `
-      Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
-      Total necessário: ${totalNecessario.toFixed(2)} kg<br>
-      Pacote informado: ${pesoPacote} kg<br>
-      <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote}kg</strong>
-    `;
+          quantidadeCompra = Math.ceil(totalNecessario / pesoPacote);
 
-  } else {
+          detalhe = `
+            Consumo médio: ${(consumoPessoaDia * 1000).toFixed(0)}g por pessoa/dia<br>
+            Total necessário: ${totalNecessario.toFixed(2)} kg<br>
+            Pacote informado: ${pesoPacote} kg<br>
+            <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote}kg</strong>
+          `;
 
-    quantidadeCompra = Math.ceil(totalNecessario);
-
-    detalhe = `
-      Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
-      Total necessário: ${totalNecessario.toFixed(2)} kg<br>
-      <strong>Sugestão de compra: ${quantidadeCompra} kg</strong>
-    `;
-  }
-}
-
-
-        else if (produto === "leite") {
+        } else {
 
           quantidadeCompra = Math.ceil(totalNecessario);
 
           detalhe = `
-            Consumo médio: ${consumoPessoaDia.toFixed(2)}L por pessoa/dia<br>
-            Total necessário: ${totalNecessario.toFixed(2)} litros<br>
-            <strong>Sugestão de compra: ${quantidadeCompra} litros</strong>
+            Consumo médio: ${(consumoPessoaDia * 1000).toFixed(0)}g por pessoa/dia<br>
+            Total necessário: ${totalNecessario.toFixed(2)} kg<br>
+            <strong>Sugestão: ${quantidadeCompra} kg</strong>
           `;
         }
-
-        else if (produto === "pao") {
-
-          quantidadeCompra = Math.ceil(totalNecessario);
-
-          detalhe = `
-            Consumo médio: ${consumoPessoaDia} unidades por pessoa/dia<br>
-            Total necessário: ${totalNecessario} unidades<br>
-            <strong>Sugestão de compra: ${quantidadeCompra} unidades</strong>
-          `;
-        }
-
-        listaProdutos.push({
-          nome: produto,
-          quantidade: quantidadeCompra,
-          detalhe
-        });
       }
+
+      // ---------------------------
+      // PRODUTOS EM LITRO
+      // ---------------------------
+      else if (produto === "leite") {
+
+        quantidadeCompra = Math.ceil(totalNecessario);
+
+        detalhe = `
+          Consumo médio: ${consumoPessoaDia.toFixed(2)}L por pessoa/dia<br>
+          Total necessário: ${totalNecessario.toFixed(2)} litros<br>
+          <strong>Sugestão: ${quantidadeCompra} litros</strong>
+        `;
+      }
+
+      // ---------------------------
+      // PRODUTOS EM UNIDADE
+      // ---------------------------
+      else if (produto === "pao") {
+
+        quantidadeCompra = Math.ceil(totalNecessario);
+
+        detalhe = `
+          Consumo médio: ${consumoPessoaDia} unidades por pessoa/dia<br>
+          Total necessário: ${totalNecessario} unidades<br>
+          <strong>Sugestão: ${quantidadeCompra} unidades</strong>
+        `;
+      }
+
+      listaProdutos.push({
+        nome: produto,
+        quantidade: quantidadeCompra,
+        detalhe
+      });
     }
 
     if (listaProdutos.length === 0) {
@@ -349,6 +417,7 @@ async function processarFluxo(frase) {
     fluxo.etapa = 0;
   }
 }
+
 
 /* ================= VOZ ================= */
 
@@ -412,4 +481,5 @@ window.onload = async () => {
   await initDB();
   await renderList();
 };
+
 
