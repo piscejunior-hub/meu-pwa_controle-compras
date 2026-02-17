@@ -177,17 +177,18 @@ async function processarCadastroPorVoz(frase) {
   frase = normalizar(frase);
   if (!frase.includes("cadastrar produto") && !frase.includes("novo produto")) return false;
 
-  const regex = /(?:cadastrar produto|novo produto)\s+(\w+).*?consumo\s+([\d.]+)\s+(quilo|kg|litro|unidade)/;
+  // regex mais flexível: captura nome do produto (qualquer coisa até "consumo"), número e unidade
+  const regex = /(?:cadastrar produto|novo produto)\s+(.+?)\s*(?:consumo)?\s*(\d+(?:[\.,]\d+)?)\s*(kg|quilo|quilos|litro|l|unidade|unidades)?/;
   const match = frase.match(regex);
 
   if (!match) { falar("Não consegui entender o cadastro."); return true; }
 
-  let nome = match[1];
-  let consumo = parseFloat(match[2]);
-  let tipoFalado = match[3];
+  let nome = match[1].trim(); // captura todo o nome do produto
+  let consumo = parseFloat(match[2].replace(",", "."));
+  let tipoFalado = match[3] || "kg";
 
   let tipo = "kg";
-  if (tipoFalado.includes("litro")) tipo = "litro";
+  if (tipoFalado.includes("litro") || tipoFalado === "l") tipo = "litro";
   if (tipoFalado.includes("unidade")) tipo = "unidade";
   if (tipoFalado.includes("kg") || tipoFalado.includes("quilo")) tipo = "kg";
 
