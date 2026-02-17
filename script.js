@@ -1,7 +1,7 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 const STORE_ITENS = "itens";
 const STORE_PRODUTOS = "produtos";
@@ -72,6 +72,54 @@ function getProdutos() {
   });
 }
 
+/* ================= LISTAR PRODUTOS ================= */
+
+async function renderProdutos() {
+
+  const container = document.getElementById("listaProdutos");
+  if (!container) return;
+
+  const produtos = await getProdutos();
+
+  if (produtos.length === 0) {
+    container.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado...</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+
+  produtos.forEach(p => {
+    const div = document.createElement("div");
+    div.style.marginBottom = "6px";
+
+    div.innerHTML = `
+      <strong>${p.nome}</strong>
+      (${p.consumoPessoaDia} por pessoa/dia - ${p.tipo})
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+/* ================= CADASTRO MANUAL ================= */
+
+async function cadastrarProduto() {
+
+  const nome = document.getElementById("nomeProduto").value;
+  const consumo = document.getElementById("consumoProduto").value;
+  const tipo = document.getElementById("tipoProduto").value;
+
+  if (!nome || !consumo) {
+    alert("Preencha todos os campos.");
+    return;
+  }
+
+  await addProduto(nome, consumo, tipo);
+  await renderProdutos();
+
+  falar("Produto cadastrado com sucesso.");
+}
+
 /* ================= CRUD ITENS ================= */
 
 function addItem(nome, quantidade, preco) {
@@ -115,6 +163,8 @@ async function renderList() {
   const lista = document.getElementById("lista");
   const totalEl = document.getElementById("total");
 
+  if (!lista || !totalEl) return;
+
   lista.innerHTML = "";
 
   const itens = await getItems();
@@ -137,20 +187,60 @@ async function renderList() {
   totalEl.innerText = "R$ " + total.toFixed(2);
 }
 
-/* ================= CADASTRAR PRODUTO ================= */
+/* ================= NUMEROS ================= */
 
-async function cadastrarProduto() {
-  const nome = document.getElementById("nomeProduto").value;
-  const consumo = document.getElementById("consumoProduto").value;
-  const tipo = document.getElementById("tipoProduto").value;
+const numerosExtenso = {
+  um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
+  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
+};
 
-  if (!nome || !consumo) {
-    alert("Preencha todos os campos.");
-    return;
+function extrairNumero(texto) {
+  const numeroDigito = texto.match(/\d+/);
+  if (numeroDigito) return parseInt(numeroDigito[0]);
+
+  for (let palavra in numerosExtenso) {
+    if (texto.includes(palavra)) {
+      return numerosExtenso[palavra];
+    }
+  }
+  return null;
+}
+
+/* ================= CADASTRO POR VOZ ================= */
+
+async function processarCadastroPorVoz(frase) {
+
+  frase = normalizar(frase);
+
+  if (!frase.includes("cadastrar produto") &&
+      !frase.includes("novo produto")) {
+    return false;
   }
 
+  const regex = /(?:cadastrar produto|novo produto)\s+(\w+).*?consumo\s+([\d.]+)\s+(quilo|kg|litro|unidade)/;
+
+  const match = frase.match(regex);
+
+  if (!match) {
+    falar("Não consegui entender o cadastro.");
+    return true;
+  }
+
+  let nome = match[1];
+  let consumo = parseFloat(match[2]);
+  let tipoFalado = match[3];
+
+  let tipo = "kg";
+
+  if (tipoFalado.includes("litro")) tipo = "litro";
+  if (tipoFalado.includes("unidade")) tipo = "unidade";
+  if (tipoFalado.includes("kg") || tipoFalado.includes("quilo")) tipo = "kg";
+
   await addProduto(nome, consumo, tipo);
-  alert("Produto cadastrado com sucesso!");
+  await renderProdutos();
+
+  falar("Produto cadastrado com sucesso.");
+  return true;
 }
 
 /* ================= FLUXO ================= */
@@ -172,26 +262,6 @@ async function iniciarFluxo() {
   fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
 
   falar("Compra para quantos dias?");
-  document.getElementById("status").innerText = "Compra para quantos dias?";
-}
-
-/* ================= NUMEROS ================= */
-
-const numerosExtenso = {
-  um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
-  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
-};
-
-function extrairNumero(texto) {
-  const numeroDigito = texto.match(/\d+/);
-  if (numeroDigito) return parseInt(numeroDigito[0]);
-
-  for (let palavra in numerosExtenso) {
-    if (texto.includes(palavra)) {
-      return numerosExtenso[palavra];
-    }
-  }
-  return null;
 }
 
 /* ================= PROCESSAR FLUXO ================= */
@@ -202,7 +272,7 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 1) {
     const dias = extrairNumero(frase);
-    if (!dias || dias <= 0) {
+    if (!dias) {
       falar("Não entendi os dias.");
       return;
     }
@@ -214,7 +284,7 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 2) {
     const pessoas = extrairNumero(frase);
-    if (!pessoas || pessoas <= 0) {
+    if (!pessoas) {
       falar("Não entendi as pessoas.");
       return;
     }
@@ -226,10 +296,10 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 3) {
 
-    const produtosCadastrados = await getProdutos();
+    const produtos = await getProdutos();
     let listaProdutos = [];
 
-    for (const produtoObj of produtosCadastrados) {
+    for (const produtoObj of produtos) {
 
       const produto = produtoObj.nome;
 
@@ -241,28 +311,56 @@ async function processarFluxo(frase) {
         const totalNecessario =
           consumoPessoaDia * fluxo.pessoas * fluxo.dias;
 
-        let quantidadeCompra = Math.ceil(totalNecessario);
+        let quantidadeCompra = 0;
         let detalhe = "";
 
         if (tipo === "kg") {
-          detalhe = `
-            Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
-            Total necessário: ${totalNecessario.toFixed(2)} kg<br>
-            <strong>Sugestão: ${quantidadeCompra} kg</strong>
-          `;
+
+          const regexPacote = new RegExp(
+            produto + "\\s*(?:pacote\\s*de\\s*)?(\\d+)\\s*(kg|quilo|quilos)?"
+          );
+
+          const matchPacote = frase.match(regexPacote);
+
+          let pesoPacote = null;
+
+          if (matchPacote && matchPacote[1]) {
+            pesoPacote = parseInt(matchPacote[1]);
+          }
+
+          if (pesoPacote && pesoPacote > 0) {
+
+            quantidadeCompra =
+              Math.ceil(totalNecessario / pesoPacote);
+
+            detalhe = `
+              Total necessário: ${totalNecessario.toFixed(2)} kg<br>
+              Pacote informado: ${pesoPacote} kg<br>
+              <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote}kg</strong>
+            `;
+
+          } else {
+
+            quantidadeCompra = Math.ceil(totalNecessario);
+
+            detalhe = `
+              Total necessário: ${totalNecessario.toFixed(2)} kg<br>
+              <strong>Sugestão: ${quantidadeCompra} kg</strong>
+            `;
+          }
         }
 
         if (tipo === "litro") {
+          quantidadeCompra = Math.ceil(totalNecessario);
           detalhe = `
-            Consumo médio: ${consumoPessoaDia.toFixed(2)}L por pessoa/dia<br>
             Total necessário: ${totalNecessario.toFixed(2)} litros<br>
             <strong>Sugestão: ${quantidadeCompra} litros</strong>
           `;
         }
 
         if (tipo === "unidade") {
+          quantidadeCompra = Math.ceil(totalNecessario);
           detalhe = `
-            Consumo médio: ${consumoPessoaDia} unidades por pessoa/dia<br>
             Total necessário: ${totalNecessario} unidades<br>
             <strong>Sugestão: ${quantidadeCompra} unidades</strong>
           `;
@@ -292,6 +390,7 @@ async function processarFluxo(frase) {
 /* ================= MOSTRAR CONSUMO ================= */
 
 function mostrarConsumo(listaProdutos) {
+
   const container = document.getElementById("listaConsumo");
   container.innerHTML = "";
 
@@ -301,7 +400,7 @@ function mostrarConsumo(listaProdutos) {
 
     div.innerHTML = `
       <div style="margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:8px;">
-        <strong style="font-size:16px;">${item.nome.toUpperCase()}</strong><br><br>
+        <strong>${item.nome.toUpperCase()}</strong><br><br>
         ${item.detalhe}
         <br><br>
         <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
@@ -385,6 +484,11 @@ function startVoice() {
       document.getElementById("status").innerText =
         "Você disse: " + frase;
 
+      const cadastrado =
+        await processarCadastroPorVoz(frase);
+
+      if (cadastrado) return;
+
       if (fluxo.ativo) {
         await processarFluxo(frase);
         return;
@@ -416,4 +520,5 @@ function startVoice() {
 window.onload = async () => {
   await initDB();
   await renderList();
+  await renderProdutos();
 };
