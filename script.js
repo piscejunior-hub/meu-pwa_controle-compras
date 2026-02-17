@@ -1,16 +1,14 @@
-/* =====================================================
-   CONFIG BANCO
-===================================================== */
+/* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
 const DB_VERSION = 8;
+
 const STORE_ITENS = "itens";
+const STORE_PRODUTOS = "produtos";
 
 let db;
 
-/* =====================================================
-   INIT DB
-===================================================== */
+/* ================= INIT DB ================= */
 
 function initDB() {
   return new Promise((resolve, reject) => {
@@ -25,8 +23,16 @@ function initDB() {
 
     request.onupgradeneeded = (event) => {
       db = event.target.result;
+
       if (!db.objectStoreNames.contains(STORE_ITENS)) {
         db.createObjectStore(STORE_ITENS, {
+          keyPath: "id",
+          autoIncrement: true
+        });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_PRODUTOS)) {
+        db.createObjectStore(STORE_PRODUTOS, {
           keyPath: "id",
           autoIncrement: true
         });
@@ -35,45 +41,7 @@ function initDB() {
   });
 }
 
-/* =====================================================
-   CONSUMO (ÚNICO BLOCO)
-===================================================== */
-
-const consumoMedio = {
-  // KG
-  arroz: 0.08,
-  feijao: 0.05,
-  macarrao: 0.07,
-  carne: 0.15,
-  frango: 0.18,
-  peixe: 0.12,
-  farinha: 0.04,
-  acucar: 0.03,
-  cafe: 0.02,
-  batata: 0.2,
-  cebola: 0.05,
-  tomate: 0.06,
-  cenoura: 0.05,
-
-  // LITROS
-  leite: 0.2,
-  refrigerante: 0.3,
-  suco: 0.25,
-  agua: 1.5,
-  oleo: 0.02,
-
-  // UNIDADES
-  pao: 2,
-  ovo: 1,
-  banana: 1,
-  maca: 1,
-  iogurte: 1,
-  bolacha: 1
-};
-
-/* =====================================================
-   UTIL
-===================================================== */
+/* ================= NORMALIZAR ================= */
 
 function normalizar(texto) {
   return texto
@@ -82,33 +50,29 @@ function normalizar(texto) {
     .toLowerCase();
 }
 
-function falar(texto) {
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(texto);
-  utterance.lang = "pt-BR";
-  window.speechSynthesis.speak(utterance);
+/* ================= CRUD PRODUTOS ================= */
+
+function addProduto(nome, consumoPessoaDia, tipo) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_PRODUTOS, "readwrite");
+    tx.objectStore(STORE_PRODUTOS).add({
+      nome: normalizar(nome),
+      consumoPessoaDia: parseFloat(consumoPessoaDia),
+      tipo
+    }).onsuccess = resolve;
+  });
 }
 
-const numerosExtenso = {
-  um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
-  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
-};
-
-function extrairNumero(texto) {
-  const numeroDigito = texto.match(/\d+/);
-  if (numeroDigito) return parseInt(numeroDigito[0]);
-
-  for (let palavra in numerosExtenso) {
-    if (texto.includes(palavra)) {
-      return numerosExtenso[palavra];
-    }
-  }
-  return null;
+function getProdutos() {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_PRODUTOS, "readonly");
+    tx.objectStore(STORE_PRODUTOS)
+      .getAll()
+      .onsuccess = e => resolve(e.target.result || []);
+  });
 }
 
-/* =====================================================
-   CRUD
-===================================================== */
+/* ================= CRUD ITENS ================= */
 
 function addItem(nome, quantidade, preco) {
   return new Promise(resolve => {
@@ -136,15 +100,20 @@ function limparCarrinho() {
   });
 }
 
-/* =====================================================
-   RENDER
-===================================================== */
+/* ================= FALAR ================= */
+
+function falar(texto) {
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(texto);
+  utterance.lang = "pt-BR";
+  speechSynthesis.speak(utterance);
+}
+
+/* ================= RENDER CARRINHO ================= */
 
 async function renderList() {
   const lista = document.getElementById("lista");
   const totalEl = document.getElementById("total");
-
-  if (!lista || !totalEl) return;
 
   lista.innerHTML = "";
 
@@ -168,9 +137,23 @@ async function renderList() {
   totalEl.innerText = "R$ " + total.toFixed(2);
 }
 
-/* =====================================================
-   FLUXO
-===================================================== */
+/* ================= CADASTRAR PRODUTO ================= */
+
+async function cadastrarProduto() {
+  const nome = document.getElementById("nomeProduto").value;
+  const consumo = document.getElementById("consumoProduto").value;
+  const tipo = document.getElementById("tipoProduto").value;
+
+  if (!nome || !consumo) {
+    alert("Preencha todos os campos.");
+    return;
+  }
+
+  await addProduto(nome, consumo, tipo);
+  alert("Produto cadastrado com sucesso!");
+}
+
+/* ================= FLUXO ================= */
 
 let fluxo = {
   ativo: false,
@@ -180,26 +163,38 @@ let fluxo = {
 };
 
 async function iniciarFluxo() {
-
   await limparCarrinho();
   await renderList();
 
-  const listaConsumo = document.getElementById("listaConsumo");
-  const formCompra = document.getElementById("formCompra");
-
-  if (listaConsumo) listaConsumo.innerHTML = "";
-  if (formCompra) formCompra.innerHTML = "";
+  document.getElementById("listaConsumo").innerHTML = "";
+  document.getElementById("formCompra").innerHTML = "";
 
   fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
 
   falar("Compra para quantos dias?");
-  document.getElementById("status").innerText =
-    "Compra para quantos dias?";
+  document.getElementById("status").innerText = "Compra para quantos dias?";
 }
 
-/* =====================================================
-   PROCESSAR FLUXO
-===================================================== */
+/* ================= NUMEROS ================= */
+
+const numerosExtenso = {
+  um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5,
+  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
+};
+
+function extrairNumero(texto) {
+  const numeroDigito = texto.match(/\d+/);
+  if (numeroDigito) return parseInt(numeroDigito[0]);
+
+  for (let palavra in numerosExtenso) {
+    if (texto.includes(palavra)) {
+      return numerosExtenso[palavra];
+    }
+  }
+  return null;
+}
+
+/* ================= PROCESSAR FLUXO ================= */
 
 async function processarFluxo(frase) {
 
@@ -231,25 +226,54 @@ async function processarFluxo(frase) {
 
   if (fluxo.etapa === 3) {
 
+    const produtosCadastrados = await getProdutos();
     let listaProdutos = [];
 
-    for (const produto in consumoMedio) {
+    for (const produtoObj of produtosCadastrados) {
 
-      if (!frase.includes(produto)) continue;
+      const produto = produtoObj.nome;
 
-      const consumo = consumoMedio[produto];
-      const total = consumo * fluxo.pessoas * fluxo.dias;
-      const quantidade = Math.ceil(total);
+      if (frase.includes(produto)) {
 
-      listaProdutos.push({
-        nome: produto,
-        quantidade,
-        detalhe: `
-          Consumo médio: ${consumo}<br>
-          Total necessário: ${total.toFixed(2)}<br>
-          <strong>Sugestão: ${quantidade}</strong>
-        `
-      });
+        const consumoPessoaDia = produtoObj.consumoPessoaDia;
+        const tipo = produtoObj.tipo;
+
+        const totalNecessario =
+          consumoPessoaDia * fluxo.pessoas * fluxo.dias;
+
+        let quantidadeCompra = Math.ceil(totalNecessario);
+        let detalhe = "";
+
+        if (tipo === "kg") {
+          detalhe = `
+            Consumo médio: ${(consumoPessoaDia*1000).toFixed(0)}g por pessoa/dia<br>
+            Total necessário: ${totalNecessario.toFixed(2)} kg<br>
+            <strong>Sugestão: ${quantidadeCompra} kg</strong>
+          `;
+        }
+
+        if (tipo === "litro") {
+          detalhe = `
+            Consumo médio: ${consumoPessoaDia.toFixed(2)}L por pessoa/dia<br>
+            Total necessário: ${totalNecessario.toFixed(2)} litros<br>
+            <strong>Sugestão: ${quantidadeCompra} litros</strong>
+          `;
+        }
+
+        if (tipo === "unidade") {
+          detalhe = `
+            Consumo médio: ${consumoPessoaDia} unidades por pessoa/dia<br>
+            Total necessário: ${totalNecessario} unidades<br>
+            <strong>Sugestão: ${quantidadeCompra} unidades</strong>
+          `;
+        }
+
+        listaProdutos.push({
+          nome: produto,
+          quantidade: quantidadeCompra,
+          detalhe
+        });
+      }
     }
 
     if (listaProdutos.length === 0) {
@@ -260,13 +284,78 @@ async function processarFluxo(frase) {
     mostrarConsumo(listaProdutos);
     falar("Cálculo concluído.");
 
-    fluxo = { ativo: false, etapa: 0, dias: 0, pessoas: 0 };
+    fluxo.ativo = false;
+    fluxo.etapa = 0;
   }
 }
 
-/* =====================================================
-   VOZ PROFISSIONAL
-===================================================== */
+/* ================= MOSTRAR CONSUMO ================= */
+
+function mostrarConsumo(listaProdutos) {
+  const container = document.getElementById("listaConsumo");
+  container.innerHTML = "";
+
+  listaProdutos.forEach(item => {
+
+    const div = document.createElement("div");
+
+    div.innerHTML = `
+      <div style="margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+        <strong style="font-size:16px;">${item.nome.toUpperCase()}</strong><br><br>
+        ${item.detalhe}
+        <br><br>
+        <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">
+          Comprar
+        </button>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+/* ================= PREPARAR + CONFIRMAR ================= */
+
+function prepararCompra(nome, quantidade) {
+
+  const form = document.getElementById("formCompra");
+
+  form.innerHTML = `
+    <h3>${nome}</h3>
+    <p><strong>Quantidade sugerida:</strong> ${quantidade}</p>
+
+    <label>Quantidade que vai comprar:</label>
+    <input type="number" id="qtdCompra" value="${quantidade}" min="0" step="0.01">
+
+    <label>Preço unitário:</label>
+    <input type="number" id="precoCompra" step="0.01" min="0">
+
+    <button onclick="confirmarCompra('${nome}')">
+      Confirmar Compra
+    </button>
+  `;
+}
+
+async function confirmarCompra(nome) {
+
+  const qtd = parseFloat(document.getElementById("qtdCompra").value);
+  const preco = parseFloat(document.getElementById("precoCompra").value);
+
+  if (isNaN(qtd) || isNaN(preco) || qtd <= 0 || preco <= 0) {
+    alert("Informe quantidade e preço válidos.");
+    return;
+  }
+
+  await addItem(nome, qtd, preco);
+  await renderList();
+
+  document.getElementById("formCompra").innerHTML =
+    "<p style='color:#aaa;'>Compra adicionada!</p>";
+
+  falar("Produto adicionado ao carrinho.");
+}
+
+/* ================= VOZ ================= */
 
 let recognition = null;
 let ouvindo = false;
@@ -277,7 +366,7 @@ function startVoice() {
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    alert("Use Google Chrome.");
+    alert("Use o Google Chrome.");
     return;
   }
 
@@ -306,11 +395,6 @@ function startVoice() {
       }
     };
 
-    recognition.onerror = (event) => {
-      console.error("Erro:", event.error);
-      alert("Erro no microfone: " + event.error);
-    };
-
     recognition.onend = () => {
       if (ouvindo) {
         try { recognition.start(); } catch (e) {}
@@ -321,17 +405,13 @@ function startVoice() {
   if (!ouvindo) {
     recognition.start();
     ouvindo = true;
-    document.getElementById("status").innerText = "🎤 Ouvindo...";
   } else {
     ouvindo = false;
     recognition.stop();
-    document.getElementById("status").innerText = "⏹️ Voz desligada";
   }
 }
 
-/* =====================================================
-   START
-===================================================== */
+/* ================= START ================= */
 
 window.onload = async () => {
   await initDB();
