@@ -25,11 +25,14 @@
     📦 Produtos Cadastrados
   </button>
 
+  <button onclick="mostrarAba('abaConsultarProdutos')">
+    🔍 Consultar / Editar Produtos
+  </button>
+
   <button onclick="mostrarAba('abaGuia')">
     📊 Guia de Consumo
   </button>
 </div>
-
 
 <h1>🛒 Lista de Compras Inteligente</h1>
 
@@ -107,47 +110,22 @@
       <div id="listaProdutos">
         <p style="color:#aaa;">Nenhum produto cadastrado...</p>
       </div>
-
     </div>
 
   </div>
 
 </div>
 
-<script src="script.js"></script>
+<!-- ABAS LATERAIS -->
 
-<script>
-
-  const voiceBtn = document.getElementById("voiceBtn");
-
-  voiceBtn.addEventListener("click", () => {
-    startVoice();
-
-    if (!voiceBtn.classList.contains("stop")) {
-      voiceBtn.classList.add("stop");
-      voiceBtn.textContent = "🛑 Parar";
-    } else {
-      voiceBtn.classList.remove("stop");
-      voiceBtn.textContent = "🎤 Iniciar";
-    }
-  });
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js")
-      .then(() => console.log("Service Worker registrado"))
-      .catch(err => console.error("Erro SW:", err));
-  }
-
-</script>
-
-<!-- ABA GUIA DE CONSUMO COMPLETA -->
-
-<div id="abaConsultarProdutos" class="aba-lateral" style="display:none;">
-  <h2>Consultar Produtos</h2>
-  <div id="listaConsultaProdutos"></div>
+<!-- ABA CONSULTA / EDIÇÃO -->
+<div id="abaConsultarProdutos" class="aba-lateral" style="display:none; padding:10px;">
+  <h2>🔍 Consultar / Editar Produtos</h2>
+  <div id="listaConsultarProdutos"></div>
 </div>
 
-<div id="abaGuia" class="aba-lateral">
+<!-- ABA GUIA DE CONSUMO -->
+<div id="abaGuia" class="aba-lateral" style="display:none; padding:10px;">
   <h2>Guia de Consumo Diário (por pessoa)</h2>
 
   <!-- GRÃOS E CEREAIS -->
@@ -227,8 +205,90 @@
 
 </div>
 
+<script src="script.js"></script>
+<script>
+  const voiceBtn = document.getElementById("voiceBtn");
+
+  voiceBtn.addEventListener("click", () => {
+    startVoice();
+
+    if (!voiceBtn.classList.contains("stop")) {
+      voiceBtn.classList.add("stop");
+      voiceBtn.textContent = "🛑 Parar";
+    } else {
+      voiceBtn.classList.remove("stop");
+      voiceBtn.textContent = "🎤 Iniciar";
+    }
+  });
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js")
+      .then(() => console.log("Service Worker registrado"))
+      .catch(err => console.error("Erro SW:", err));
+  }
+
+  // Funções de produtos
+  let produtos = [];
+
+  function cadastrarProduto() {
+    const nome = document.getElementById("nomeProduto").value.trim();
+    const consumo = parseFloat(document.getElementById("consumoProduto").value);
+    const tipo = document.getElementById("tipoProduto").value;
+
+    if (!nome || isNaN(consumo)) return alert("Preencha todos os campos");
+
+    const produto = { nome, consumo, tipo };
+    produtos.push(produto);
+
+    document.getElementById("nomeProduto").value = "";
+    document.getElementById("consumoProduto").value = "";
+    document.getElementById("tipoProduto").value = "kg";
+
+    atualizarListaProdutos();
+  }
+
+  function atualizarListaProdutos() {
+    const lista = document.getElementById("listaProdutos");
+    const listaConsulta = document.getElementById("listaConsultarProdutos");
+
+    if (produtos.length === 0) {
+      lista.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado...</p>";
+      listaConsulta.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado...</p>";
+      return;
+    }
+
+    lista.innerHTML = "";
+    listaConsulta.innerHTML = "";
+
+    produtos.forEach((p, i) => {
+      // Lista produtos lado direito
+      const item = document.createElement("p");
+      item.textContent = `${p.nome} – ${p.consumo} ${p.tipo}`;
+      lista.appendChild(item);
+
+      // Lista aba consulta com botão de excluir
+      const itemConsulta = document.createElement("div");
+      itemConsulta.style.marginBottom = "5px";
+      itemConsulta.innerHTML = `${p.nome} – ${p.consumo} ${p.tipo} <button onclick="excluirProduto(${i})">❌</button>`;
+      listaConsulta.appendChild(itemConsulta);
+    });
+  }
+
+  function excluirProduto(index) {
+    produtos.splice(index, 1);
+    atualizarListaProdutos();
+  }
+
+  function mostrarAba(id) {
+    const abas = document.querySelectorAll(".aba-lateral");
+    abas.forEach(a => a.style.display = "none");
+    document.getElementById(id).style.display = "block";
+  }
+
+  function abrirMenu() { document.getElementById("menuLateral").style.width = "250px"; }
+  function fecharMenu() { document.getElementById("menuLateral").style.width = "0"; }
+
+</script>
 
 </body>
 </html>
-
-
