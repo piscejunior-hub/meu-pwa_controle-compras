@@ -212,23 +212,40 @@ async function processarCadastroPorVoz(frase) {
 
   frase = normalizar(frase);
 
-  if (!frase.includes("cadastrar produto") &&
-      !frase.includes("novo produto")) {
-    return false;
-  }
+  // Palavras que indicam cadastro
+  const gatilhos = [
+    "cadastrar",
+    "novo produto",
+    "adicionar",
+    "adiciona",
+    "incluir",
+    "inclui",
+    "colocar",
+    "coloca"
+  ];
 
-  const regex = /(?:cadastrar produto|novo produto)\s+(\w+).*?consumo\s+([\d.]+)\s+(quilo|kg|litro|unidade)/;
+  const ativarCadastro = gatilhos.some(g => frase.includes(g));
+
+  if (!ativarCadastro) return false;
+
+  // Regex mais flexível
+  const regex = /(\w+).*?([\d.]+)\s*(kg|quilo|quilos|litro|litros|unidade|unidades)/;
 
   const match = frase.match(regex);
 
   if (!match) {
-    falar("Não consegui entender o cadastro.");
+    falar("Não consegui entender o produto.");
     return true;
   }
 
   let nome = match[1];
   let consumo = parseFloat(match[2]);
   let tipoFalado = match[3];
+
+  if (isNaN(consumo)) {
+    falar("Não entendi o valor do consumo.");
+    return true;
+  }
 
   let tipo = "kg";
 
@@ -239,9 +256,10 @@ async function processarCadastroPorVoz(frase) {
   await addProduto(nome, consumo, tipo);
   await renderProdutos();
 
-  falar("Produto cadastrado com sucesso.");
+  falar(`Produto ${nome} cadastrado com sucesso.`);
   return true;
 }
+
 
 /* ================= FLUXO ================= */
 
@@ -522,3 +540,4 @@ window.onload = async () => {
   await renderList();
   await renderProdutos();
 };
+
