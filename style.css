@@ -310,13 +310,28 @@ input {
   top: 0;
   width: 90%;
   height: 100%;
-  background: white;
+  background: linear-gradient(145deg, var(--bg-card-1), var(--bg-card-2));
+  color: var(--text-light);
   padding: 20px;
   overflow-y: auto;
   z-index: 998;
 }
 
 .guia-item {
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
+  background: var(--bg-item);
+  padding: 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  font-size: 14px;
+  line-height: 1.4;
 }
+
+.guia-item strong {
+  color: #ffffff;
+}
+
+.guia-item {
+  color: var(--text-muted);
+}
+
