@@ -67,6 +67,22 @@ function getProdutos() {
   });
 }
 
+function atualizarProduto(id, nome, consumoPessoaDia, tipo) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_PRODUTOS, "readwrite");
+    const store = tx.objectStore(STORE_PRODUTOS);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const produto = req.result;
+      if (!produto) return resolve();
+      produto.nome = normalizar(nome);
+      produto.consumoPessoaDia = parseFloat(consumoPessoaDia);
+      produto.tipo = tipo;
+      store.put(produto).onsuccess = resolve;
+    };
+  });
+}
+
 /* ================= LISTAR PRODUTOS ================= */
 
 async function renderProdutos() {
@@ -177,13 +193,12 @@ async function processarCadastroPorVoz(frase) {
   frase = normalizar(frase);
   if (!frase.includes("cadastrar produto") && !frase.includes("novo produto")) return false;
 
-  // regex mais flexível: captura nome do produto (qualquer coisa até "consumo"), número e unidade
   const regex = /(?:cadastrar produto|novo produto)\s+(.+?)\s*(?:consumo)?\s*(\d+(?:[\.,]\d+)?)\s*(kg|quilo|quilos|litro|l|unidade|unidades)?/;
   const match = frase.match(regex);
 
   if (!match) { falar("Não consegui entender o cadastro."); return true; }
 
-  let nome = match[1].trim(); // captura todo o nome do produto
+  let nome = match[1].trim();
   let consumo = parseFloat(match[2].replace(",", "."));
   let tipoFalado = match[3] || "kg";
 
@@ -299,7 +314,6 @@ function mostrarConsumo(listaProdutos) {
       <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">Comprar</button>
     `;
 
-    // usa pointerdown para evitar duplicação no mobile
     div.addEventListener("pointerdown", e => {
       if (e.target.tagName.toLowerCase() === "button") return;
 
@@ -397,6 +411,7 @@ function mostrarAba(id) {
   const aba = document.getElementById(id);
   if (aba) aba.style.display = "block";
   if (id === "abaProdutos") carregarProdutosNaAba();
+  if (id === "abaConsultarProdutos") renderProdutosConsulta();
   fecharMenu();
 }
 
@@ -437,6 +452,53 @@ async function carregarProdutosNaAba() {
     div.addEventListener("pointerdown", () => cadastrarProdutoClicado(p));
     container.appendChild(div);
   });
+}
+
+/* ================= ABA CONSULTA/EDIÇÃO ================= */
+
+async function renderProdutosConsulta() {
+  const produtos = await getProdutos();
+  const container = document.getElementById("listaConsultarProdutos");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (produtos.length === 0) {
+    container.innerHTML = "<p style='color:#aaa;'>Nenhum produto cadastrado...</p>";
+    return;
+  }
+
+  produtos.forEach(p => {
+    const div = document.createElement("div");
+    div.style.padding = "10px";
+    div.style.borderBottom = "1px solid #ddd";
+
+    div.innerHTML = `
+      <input type="text" value="${p.nome}" id="nomeEdit_${p.id}" style="width:40%;">
+      <input type="number" value="${p.consumoPessoaDia}" id="consumoEdit_${p.id}" style="width:20%;" step="0.01">
+      <select id="tipoEdit_${p.id}">
+        <option value="kg" ${p.tipo==='kg'?'selected':''}>kg</option>
+        <option value="litro" ${p.tipo==='litro'?'selected':''}>litro</option>
+        <option value="unidade" ${p.tipo==='unidade'?'selected':''}>unidade</option>
+      </select>
+      <button onclick="salvarEdicao(${p.id})">Salvar</button>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+async function salvarEdicao(id) {
+  const nome = document.getElementById(`nomeEdit_${id}`).value;
+  const consumo = parseFloat(document.getElementById(`consumoEdit_${id}`).value);
+  const tipo = document.getElementById(`tipoEdit_${id}`).value;
+
+  if (!nome || isNaN(consumo)) { alert("Preencha todos os campos corretamente."); return; }
+
+  await atualizarProduto(id, nome, consumo, tipo);
+  await renderProdutosConsulta();
+  await carregarProdutosNaAba();
+  falar("Produto atualizado com sucesso.");
 }
 
 /* ================= START ================= */
