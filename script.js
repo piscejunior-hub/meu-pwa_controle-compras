@@ -567,6 +567,29 @@ function mostrarAba(id) {
   fecharMenu();
 }
 
+/* ================= CADASTRO DIRETO AO CLICAR ================= */
+
+async function cadastrarProdutoClicado(produto) {
+  // fala perguntando
+  falar(`Deseja cadastrar o produto ${produto.nome}?`);
+
+  // pergunta via confirm
+  const confirma = confirm(`Deseja cadastrar o produto ${produto.nome}?`);
+
+  if (!confirma) return;
+
+  // cadastra direto no IndexedDB
+  await addProduto(produto.nome, produto.consumoPessoaDia, produto.tipo);
+
+  // atualiza listas na tela
+  await renderProdutos();
+  await carregarProdutosNaAba();
+
+  falar("Produto cadastrado com sucesso.");
+}
+
+
+
 async function carregarProdutosNaAba() {
   const produtos = await getProdutos();
   const container = document.getElementById("listaProdutosAba");
@@ -576,12 +599,22 @@ async function carregarProdutosNaAba() {
   container.innerHTML = "";
 
   produtos.forEach(p => {
-    container.innerHTML += `
-      <div style="padding:10px;border-bottom:1px solid #ddd">
-        <strong>${p.nome}</strong><br>
-        Consumo: ${p.consumoPessoaDia} ${p.tipo} / pessoa/dia
-      </div>
+    const div = document.createElement("div");
+    div.style.padding = "10px";
+    div.style.borderBottom = "1px solid #ddd";
+    div.style.cursor = "pointer"; // indica que é clicável
+
+    div.innerHTML = `
+      <strong>${p.nome}</strong><br>
+      Consumo: ${p.consumoPessoaDia} ${p.tipo} / pessoa/dia
     `;
+
+    // evento de clique que cadastra direto
+    div.addEventListener("click", () => {
+      cadastrarProdutoClicado(p);
+    });
+
+    container.appendChild(div);
   });
 }
 
