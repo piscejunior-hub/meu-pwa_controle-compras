@@ -536,7 +536,55 @@ function startVoice() {
   }
 }
 
+/* ================= MENU LATERAL ================= */
+
+function abrirMenu() {
+  document.getElementById("menuLateral").style.left = "0";
+}
+
+function fecharMenu() {
+  document.getElementById("menuLateral").style.left = "-260px";
+}
+
+function mostrarAba(id) {
+
+  document.querySelectorAll(".aba-lateral")
+    .forEach(el => el.style.display = "none");
+
+  document.getElementById(id).style.display = "block";
+
+  fecharMenu();
+
+  if (id === "abaProdutos") {
+    carregarProdutosNaAba();
+  }
+}
+
+async function carregarProdutosNaAba() {
+  const produtos = await getProdutos();
+  const container = document.getElementById("listaProdutosAba");
+
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  produtos.forEach(p => {
+    container.innerHTML += `
+      <div style="padding:10px;border-bottom:1px solid #ddd">
+        <strong>${p.nome}</strong><br>
+        Consumo: ${p.consumoPessoaDia} ${p.tipo} / pessoa/dia
+      </div>
+    `;
+  });
+}
+
+
+
+
+
+
 /* ================= START ================= */
+
 
 window.onload = async () => {
   await initDB();
