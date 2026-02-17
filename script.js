@@ -12,6 +12,7 @@ let db;
 
 let ultimaFraseGlobal = "";
 let bloqueioVoz = false;
+let bloqueioCadastro = false; // bloqueio para evitar duplicação
 
 /* ================= INIT DB ================= */
 
@@ -84,7 +85,6 @@ async function renderProdutos() {
   produtos.forEach(p => {
     const div = document.createElement("div");
     div.style.marginBottom = "6px";
-
     div.innerHTML = `<strong>${p.nome}</strong> (${p.consumoPessoaDia} por pessoa/dia - ${p.tipo})`;
     container.appendChild(div);
   });
@@ -298,7 +298,8 @@ function mostrarConsumo(listaProdutos) {
       <button onclick="prepararCompra('${item.nome}', ${item.quantidade})">Comprar</button>
     `;
 
-    div.addEventListener("click", e => {
+    // usa pointerdown para evitar duplicação no mobile
+    div.addEventListener("pointerdown", e => {
       if (e.target.tagName.toLowerCase() === "button") return;
 
       cadastrarProdutoClicado({ 
@@ -401,14 +402,19 @@ function mostrarAba(id) {
 /* ================= CADASTRO DIRETO AO CLICAR ================= */
 
 async function cadastrarProdutoClicado(produto) {
+  if (bloqueioCadastro) return;
+  bloqueioCadastro = true;
+
   falar(`Deseja cadastrar o produto ${produto.nome}?`);
   const confirma = confirm(`Deseja cadastrar o produto ${produto.nome}?`);
-  if (!confirma) return;
+  if (!confirma) { bloqueioCadastro = false; return; }
 
   await addProduto(produto.nome, produto.consumoPessoaDia, produto.tipo);
   await renderProdutos();
   await carregarProdutosNaAba();
   falar("Produto cadastrado com sucesso.");
+
+  setTimeout(() => { bloqueioCadastro = false; }, 500);
 }
 
 /* ================= CARREGAR PRODUTOS ABA ================= */
@@ -427,7 +433,7 @@ async function carregarProdutosNaAba() {
     div.style.cursor = "pointer";
 
     div.innerHTML = `<strong>${p.nome}</strong><br>Consumo: ${p.consumoPessoaDia} ${p.tipo} / pessoa/dia`;
-    div.addEventListener("click", () => cadastrarProdutoClicado(p));
+    div.addEventListener("pointerdown", () => cadastrarProdutoClicado(p));
     container.appendChild(div);
   });
 }
