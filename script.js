@@ -13,6 +13,11 @@ let db;
 let ultimaFraseGlobal = "";
 let bloqueioVoz = false;
 
+
+/* ================= PRODUTO GUIA PENDENTE ================= */
+
+let produtoPendenteCadastro = null;
+
 /* ================= INIT DB ================= */
 
 function initDB() {
@@ -76,6 +81,103 @@ function getProdutos() {
       .onsuccess = e => resolve(e.target.result || []);
   });
 }
+
+
+/* ================= ATIVAR CLIQUE GUIA ================= */
+
+function ativarCliqueGuia() {
+
+  document.querySelectorAll(".guia-item").forEach(item => {
+
+    item.style.cursor = "pointer";
+
+    item.addEventListener("click", () => {
+
+      const strong = item.querySelector("strong");
+
+      if (!strong) return;
+
+      const nome = strong.innerText.trim();
+
+      const textoCompleto = item.innerText;
+
+      const consumoMatch = textoCompleto.match(/–\s*([\d.]+)\s*(quilo|litro|unidade)/i);
+
+      if (!consumoMatch) return;
+
+      const consumo = parseFloat(consumoMatch[1]);
+
+      let tipo = "kg";
+
+      if (consumoMatch[2].includes("litro")) tipo = "litro";
+      if (consumoMatch[2].includes("unidade")) tipo = "unidade";
+      if (consumoMatch[2].includes("quilo")) tipo = "kg";
+
+      produtoPendenteCadastro = { nome, consumo, tipo };
+
+      mostrarConfirmacaoCadastro(nome);
+
+      falar(`Deseja cadastrar ${nome}?`);
+    });
+  });
+}
+
+
+/* ================= CONFIRMAÇÃO GUIA ================= */
+
+function mostrarConfirmacaoCadastro(nome) {
+
+  const container = document.getElementById("formCompra");
+
+  container.innerHTML = `
+    <div style="padding:15px; border:1px solid #ddd; border-radius:8px;">
+      <h3>Cadastrar Produto</h3>
+      <p>Deseja cadastrar <strong>${nome}</strong>?</p>
+      <button onclick="confirmarCadastroGuia()">Confirmar</button>
+      <button onclick="cancelarCadastroGuia()">Cancelar</button>
+    </div>
+  `;
+}
+
+async function confirmarCadastroGuia() {
+
+  if (!produtoPendenteCadastro) return;
+
+  const produtos = await getProdutos();
+
+  const jaExiste = produtos.some(p =>
+    normalizar(p.nome) === normalizar(produtoPendenteCadastro.nome)
+  );
+
+  if (jaExiste) {
+    falar("Este produto já está cadastrado.");
+    cancelarCadastroGuia();
+    return;
+  }
+
+  await addProduto(
+    produtoPendenteCadastro.nome,
+    produtoPendenteCadastro.consumo,
+    produtoPendenteCadastro.tipo
+  );
+
+  await renderProdutos();
+
+  falar("Produto cadastrado com sucesso.");
+
+  cancelarCadastroGuia();
+}
+
+function cancelarCadastroGuia() {
+
+  produtoPendenteCadastro = null;
+
+  document.getElementById("formCompra").innerHTML =
+    "<p style='color:#aaa;'>Selecione um item do consumo</p>";
+}
+
+
+
 
 /* ================= LISTAR PRODUTOS ================= */
 
@@ -481,7 +583,7 @@ function startVoice() {
     recognition.continuous = true;
     recognition.interimResults = false;
 
-    recognition.onresult = async (event) => {
+   recognition.onresult = async (event) => {
 
   const fraseOriginal =
     event.results[event.results.length - 1][0].transcript;
@@ -493,7 +595,6 @@ function startVoice() {
 
   // 🔒 BLOQUEIO GLOBAL CONTRA DUPLICAÇÃO
   if (bloqueioVoz) return;
-
   if (frase === ultimaFraseGlobal) return;
 
   bloqueioVoz = true;
@@ -502,6 +603,22 @@ function startVoice() {
   setTimeout(() => {
     bloqueioVoz = false;
   }, 1500);
+
+  // ================= CONFIRMAÇÃO GUIA =================
+
+  if (produtoPendenteCadastro) {
+
+    if (frase.includes("sim")) {
+      await confirmarCadastroGuia();
+      return;
+    }
+
+    if (frase.includes("nao")) {
+      cancelarCadastroGuia();
+      falar("Cadastro cancelado.");
+      return;
+    }
+  }
 
   // ================= EXECUÇÃO NORMAL =================
 
@@ -520,21 +637,6 @@ function startVoice() {
   }
 };
 
-    recognition.onend = () => {
-      if (ouvindo) {
-        try { recognition.start(); } catch (e) {}
-      }
-    };
-  }
-
-  if (!ouvindo) {
-    recognition.start();
-    ouvindo = true;
-  } else {
-    ouvindo = false;
-    recognition.stop();
-  }
-}
 
 /* ================= MENU LATERAL ================= */
 
@@ -570,7 +672,6 @@ function mostrarAba(id) {
 async function carregarProdutosNaAba() {
   const produtos = await getProdutos();
   const container = document.getElementById("listaProdutosAba");
-
   if (!container) return;
 
   container.innerHTML = "";
@@ -585,12 +686,6 @@ async function carregarProdutosNaAba() {
   });
 }
 
-
-
-
-
-
-
 /* ================= START ================= */
 
 
@@ -598,6 +693,8 @@ window.onload = async () => {
   await initDB();
   await renderList();
   await renderProdutos();
+ativarCliqueGuia();
 };
+
 
 
