@@ -651,42 +651,7 @@ function startVoice() {
 }
 
 
-  // ================= CONFIRMAÇÃO GUIA =================
-
-if (produtoPendenteCadastro) {
-
-  if (frase.includes("sim")) {
-    await confirmarCadastroGuia();
-    return;
-  }
-
-  if (frase.includes("nao")) {
-    cancelarCadastroGuia();
-    falar("Cadastro cancelado.");
-    return;
-  }
-}
-
-// ================= EXECUÇÃO NORMAL =================
-
-const cadastrado =
-  await processarCadastroPorVoz(fraseOriginal);
-
-if (cadastrado) return;
-
-if (fluxo.ativo) {
-  await processarFluxo(fraseOriginal);
-  return;
-}
-
-if (frase.includes("iniciar compra")) {
-  iniciarFluxo();
-}
-};
-
-
-
-
+ 
 /* ================= MENU LATERAL ================= */
 
 function abrirMenu() {
@@ -742,6 +707,7 @@ window.onload = async () => {
   await renderProdutos();
 ativarCliqueGuia();
 };
+
 
 
 
