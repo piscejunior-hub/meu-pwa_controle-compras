@@ -583,26 +583,73 @@ function startVoice() {
     recognition.continuous = true;
     recognition.interimResults = false;
 
-   recognition.onresult = async (event) => {
+    recognition.onresult = async (event) => {
 
-  const fraseOriginal =
-    event.results[event.results.length - 1][0].transcript;
+      const fraseOriginal =
+        event.results[event.results.length - 1][0].transcript;
 
-  const frase = normalizar(fraseOriginal);
+      const frase = normalizar(fraseOriginal);
 
-  document.getElementById("status").innerText =
-    "Você disse: " + fraseOriginal;
+      document.getElementById("status").innerText =
+        "Você disse: " + fraseOriginal;
 
-  // 🔒 BLOQUEIO GLOBAL CONTRA DUPLICAÇÃO
-  if (bloqueioVoz) return;
-  if (frase === ultimaFraseGlobal) return;
+      if (bloqueioVoz) return;
+      if (frase === ultimaFraseGlobal) return;
 
-  bloqueioVoz = true;
-  ultimaFraseGlobal = frase;
+      bloqueioVoz = true;
+      ultimaFraseGlobal = frase;
 
-  setTimeout(() => {
-    bloqueioVoz = false;
-  }, 1500);
+      setTimeout(() => {
+        bloqueioVoz = false;
+      }, 1500);
+
+      // Confirmação de cadastro da guia
+      if (produtoPendenteCadastro) {
+
+        if (frase.includes("sim")) {
+          await confirmarCadastroGuia();
+          return;
+        }
+
+        if (frase.includes("nao")) {
+          cancelarCadastroGuia();
+          falar("Cadastro cancelado.");
+          return;
+        }
+      }
+
+      // Execução normal
+      const cadastrado =
+        await processarCadastroPorVoz(fraseOriginal);
+
+      if (cadastrado) return;
+
+      if (fluxo.ativo) {
+        await processarFluxo(fraseOriginal);
+        return;
+      }
+
+      if (frase.includes("iniciar compra")) {
+        iniciarFluxo();
+      }
+    };
+
+    recognition.onend = () => {
+      if (ouvindo) {
+        try { recognition.start(); } catch (e) {}
+      }
+    };
+  }
+
+  if (!ouvindo) {
+    recognition.start();
+    ouvindo = true;
+  } else {
+    ouvindo = false;
+    recognition.stop();
+  }
+}
+
 
   // ================= CONFIRMAÇÃO GUIA =================
 
