@@ -255,6 +255,31 @@ function limparCarrinho() {
   });
 }
 
+
+function updateItem(id, nome, quantidade, preco) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    tx.objectStore(STORE_ITENS).put({
+      id,
+      nome,
+      quantidade,
+      preco
+    }).onsuccess = resolve;
+  });
+}
+
+function deleteItem(id) {
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_ITENS, "readwrite");
+    tx.objectStore(STORE_ITENS).delete(id).onsuccess = resolve;
+  });
+}
+
+
+
+
+
+
 /* ================= FALAR ================= */
 
 function falar(texto) {
@@ -278,21 +303,28 @@ async function renderList() {
   let total = 0;
 
   itens.forEach(item => {
+
     const subtotal = item.quantidade * item.preco;
     total += subtotal;
 
     const li = document.createElement("li");
+
     li.innerHTML = `
       <strong>${item.nome}</strong><br>
       Qtd: ${item.quantidade} |
       Preço: R$ ${item.preco.toFixed(2)} |
       Subtotal: R$ ${subtotal.toFixed(2)}
+      <br><br>
+      <button onclick="editarItem(${item.id}, '${item.nome}', ${item.quantidade}, ${item.preco})">✏️ Editar</button>
+      <button onclick="excluirItem(${item.id})">🗑️ Excluir</button>
     `;
+
     lista.appendChild(li);
   });
 
   totalEl.innerText = "R$ " + total.toFixed(2);
 }
+
 
 /* ================= NUMEROS ================= */
 
@@ -561,6 +593,62 @@ async function confirmarCompra(nome) {
   falar("Produto adicionado ao carrinho.");
 }
 
+
+
+
+function editarItem(id, nome, quantidade, preco) {
+
+  const form = document.getElementById("formCompra");
+
+  form.innerHTML = `
+    <h3>Editar ${nome}</h3>
+
+    <label>Quantidade:</label>
+    <input type="number" id="editQtd" value="${quantidade}" step="0.01">
+
+    <label>Preço:</label>
+    <input type="number" id="editPreco" value="${preco}" step="0.01">
+
+    <br><br>
+    <button onclick="salvarEdicao(${id}, '${nome}')">
+      Salvar Alteração
+    </button>
+  `;
+}
+
+
+
+async function salvarEdicao(id, nome) {
+
+  const qtd = parseFloat(document.getElementById("editQtd").value);
+  const preco = parseFloat(document.getElementById("editPreco").value);
+
+  if (isNaN(qtd) || isNaN(preco) || qtd <= 0 || preco <= 0) {
+    alert("Valores inválidos.");
+    return;
+  }
+
+  await updateItem(id, nome, qtd, preco);
+  await renderList();
+
+  document.getElementById("formCompra").innerHTML =
+    "<p style='color:#aaa;'>Item atualizado!</p>";
+
+  falar("Item atualizado com sucesso.");
+}
+
+async function excluirItem(id) {
+
+  if (!confirm("Deseja excluir este item do carrinho?")) return;
+
+  await deleteItem(id);
+  await renderList();
+
+  falar("Item removido do carrinho.");
+}
+
+
+
 /* ================= VOZ ================= */
 
 let recognition = null;
@@ -707,6 +795,7 @@ window.onload = async () => {
   await renderProdutos();
 ativarCliqueGuia();
 };
+
 
 
 
