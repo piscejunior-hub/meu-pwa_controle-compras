@@ -735,17 +735,23 @@ async function excluirItem(id) {
 
 /* ================= Fnalizar compra ================= */
 
+/* ================= FINALIZAR COMPRA ================= */
+
 async function finalizarCompra() {
-  const itens = await listarItens();
+
+  const itens = await getItems();
 
   if (!itens || itens.length === 0) {
-    alert("Nenhum item na lista.");
+    alert("Nenhum item no carrinho.");
+    falar("Nenhum item no carrinho.");
     return;
   }
 
-  const total = itens.reduce((soma, item) => {
-    return soma + (item.preco || 0) * (item.quantidade || 1);
-  }, 0);
+  let total = 0;
+
+  itens.forEach(item => {
+    total += item.quantidade * item.preco;
+  });
 
   const compra = {
     data: new Date().toISOString(),
@@ -758,10 +764,15 @@ async function finalizarCompra() {
   store.add(compra);
 
   tx.oncomplete = async () => {
-    await limparLista(); // sua função que limpa itens atuais
+
+    await limparCarrinho();
+    await renderList();
+
     alert("Compra finalizada com sucesso!");
+    falar("Compra finalizada com sucesso.");
   };
 }
+
 
 
 
@@ -864,9 +875,8 @@ if (frase.includes("deslocamento")) {
       }
 
       if (frase.includes("iniciar compra")) {
-        iniciarFluxo();
-      }
-
+  iniciarFluxo();
+  return;
 }
 
 if (frase.includes("finalizar compra")) {
@@ -874,7 +884,7 @@ if (frase.includes("finalizar compra")) {
   return;
 }
 
-    };
+   // };
 
     recognition.onend = () => {
       if (ouvindo) {
