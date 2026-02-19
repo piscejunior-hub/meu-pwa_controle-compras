@@ -1,10 +1,11 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 const STORE_ITENS = "itens";
 const STORE_PRODUTOS = "produtos";
+const STORE_COMPRAS = "compras"; // 👈 FALTAVA ISSO
 
 let db;
 
@@ -47,9 +48,16 @@ function initDB() {
           autoIncrement: true
         });
       }
-    };
-  });
-}
+
+
+// 🔥 NOVA STORE PARA HISTÓRICO DE COMPRAS
+  if (!db.objectStoreNames.contains(STORE_COMPRAS)) {
+    db.createObjectStore(STORE_COMPRAS, {
+      keyPath: "id",
+      autoIncrement: true
+    });
+  }
+};
 
 /* ================= NORMALIZAR ================= */
 
@@ -725,6 +733,37 @@ async function excluirItem(id) {
 }
 
 
+/* ================= Fnalizar compra ================= */
+
+async function finalizarCompra() {
+  const itens = await listarItens();
+
+  if (!itens || itens.length === 0) {
+    alert("Nenhum item na lista.");
+    return;
+  }
+
+  const total = itens.reduce((soma, item) => {
+    return soma + (item.preco || 0) * (item.quantidade || 1);
+  }, 0);
+
+  const compra = {
+    data: new Date().toISOString(),
+    itens: itens,
+    total: total
+  };
+
+  const tx = db.transaction(STORE_COMPRAS, "readwrite");
+  const store = tx.objectStore(STORE_COMPRAS);
+  store.add(compra);
+
+  tx.oncomplete = async () => {
+    await limparLista(); // sua função que limpa itens atuais
+    alert("Compra finalizada com sucesso!");
+  };
+}
+
+
 
 /* ================= VOZ ================= */
 
@@ -827,6 +866,14 @@ if (frase.includes("deslocamento")) {
       if (frase.includes("iniciar compra")) {
         iniciarFluxo();
       }
+
+}
+
+if (frase.includes("finalizar compra")) {
+  await finalizarCompra();
+  return;
+}
+
     };
 
     recognition.onend = () => {
