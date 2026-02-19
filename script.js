@@ -276,6 +276,46 @@ function deleteItem(id) {
 }
 
 
+/* ================= FINANCEIRO ================= */
+
+function obterValorMonetario(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+
+  return parseFloat(
+    el.innerText
+      .replace("R$", "")
+      .replace(",", ".")
+      .trim()
+  ) || 0;
+}
+
+function atualizarResumoFinanceiro(totalCompras) {
+
+  const totalEl = document.getElementById("total");
+
+  const orcamento = obterValorMonetario("orcamento");
+  const deslocamento = obterValorMonetario("deslocamento");
+
+  const totalGeral = totalCompras + deslocamento;
+  const restante = orcamento - totalGeral;
+
+  let cor = restante < 0 ? "red" : "lime";
+
+  totalEl.innerHTML = `
+    Total Compras: R$ ${totalCompras.toFixed(2)} <br>
+    Deslocamento: R$ ${deslocamento.toFixed(2)} <br>
+    <strong>Total Geral: R$ ${totalGeral.toFixed(2)}</strong><br>
+    <span style="color:${cor}">
+      Orçamento Restante: R$ ${restante.toFixed(2)}
+    </span>
+  `;
+
+  if (restante < 0) {
+    falar("Atenção. Orçamento ultrapassado.");
+  }
+}
+
 
 
 
@@ -322,7 +362,7 @@ async function renderList() {
     lista.appendChild(li);
   });
 
-  totalEl.innerText = "R$ " + total.toFixed(2);
+  atualizarResumoFinanceiro(total);
 }
 
 
@@ -392,6 +432,18 @@ let fluxo = {
 };
 
 async function iniciarFluxo() {
+
+
+const orcamento = obterValorMonetario("orcamento");
+
+if (orcamento <= 0) {
+  alert("Defina um orçamento antes de iniciar.");
+  falar("Defina um orçamento antes de iniciar.");
+  return;
+}
+
+
+
   await limparCarrinho();
   await renderList();
 
@@ -706,6 +758,36 @@ function startVoice() {
         }
       }
 
+
+
+// Definir orçamento por voz
+if (frase.includes("orcamento")) {
+  const valor = extrairNumero(frase);
+  if (valor) {
+    document.getElementById("orcamento").innerText =
+      "R$ " + valor.toFixed(2);
+    falar("Orçamento definido.");
+  }
+  return;
+}
+
+// Definir deslocamento por voz
+if (frase.includes("deslocamento")) {
+  const valor = extrairNumero(frase);
+  if (valor) {
+    document.getElementById("deslocamento").innerText =
+      "R$ " + valor.toFixed(2);
+    falar("Deslocamento definido.");
+  }
+  return;
+}
+
+
+
+
+
+
+
       // Execução normal
       const cadastrado =
         await processarCadastroPorVoz(fraseOriginal);
@@ -795,6 +877,7 @@ window.onload = async () => {
   await renderProdutos();
 ativarCliqueGuia();
 };
+
 
 
 
