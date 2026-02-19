@@ -818,7 +818,7 @@ function startVoice() {
         bloqueioVoz = false;
       }, 1500);
 
-      // Confirmação de cadastro da guia
+      // Confirmação guia
       if (produtoPendenteCadastro) {
 
         if (frase.includes("sim")) {
@@ -833,37 +833,28 @@ function startVoice() {
         }
       }
 
+      // Orçamento
+      if (frase.includes("orcamento")) {
+        const valor = extrairNumero(frase);
+        if (valor) {
+          document.getElementById("orcamento").innerText =
+            "R$ " + valor.toFixed(2);
+          falar("Orçamento definido.");
+        }
+        return;
+      }
 
+      // Deslocamento
+      if (frase.includes("deslocamento")) {
+        const valor = extrairNumero(frase);
+        if (valor) {
+          document.getElementById("deslocamento").innerText =
+            "R$ " + valor.toFixed(2);
+          falar("Deslocamento definido.");
+        }
+        return;
+      }
 
-// Definir orçamento por voz
-if (frase.includes("orcamento")) {
-  const valor = extrairNumero(frase);
-  if (valor) {
-    document.getElementById("orcamento").innerText =
-      "R$ " + valor.toFixed(2);
-    falar("Orçamento definido.");
-  }
-  return;
-}
-
-// Definir deslocamento por voz
-if (frase.includes("deslocamento")) {
-  const valor = extrairNumero(frase);
-  if (valor) {
-    document.getElementById("deslocamento").innerText =
-      "R$ " + valor.toFixed(2);
-    falar("Deslocamento definido.");
-  }
-  return;
-}
-
-
-
-
-
-
-
-      // Execução normal
       const cadastrado =
         await processarCadastroPorVoz(fraseOriginal);
 
@@ -875,16 +866,16 @@ if (frase.includes("deslocamento")) {
       }
 
       if (frase.includes("iniciar compra")) {
-  iniciarFluxo();
-  return;
-}
+        iniciarFluxo();
+        return;
+      }
 
-if (frase.includes("finalizar compra")) {
-  await finalizarCompra();
-  return;
-}
+      if (frase.includes("finalizar compra")) {
+        await finalizarCompra();
+        return;
+      }
 
-   // };
+    }; // ✅ FECHA onresult CORRETAMENTE
 
     recognition.onend = () => {
       if (ouvindo) {
@@ -901,8 +892,6 @@ if (frase.includes("finalizar compra")) {
     recognition.stop();
   }
 }
-
-
  
 /* ================= MENU LATERAL ================= */
 
