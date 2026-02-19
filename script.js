@@ -1,11 +1,10 @@
 /* ================= CONFIG BANCO ================= */
 
 const DB_NAME = "comprasDB";
-const DB_VERSION = 10;
+const DB_VERSION = 9;
 
 const STORE_ITENS = "itens";
 const STORE_PRODUTOS = "produtos";
-const STORE_COMPRAS = "compras"; // 👈 FALTAVA ISSO
 
 let db;
 
@@ -48,16 +47,9 @@ function initDB() {
           autoIncrement: true
         });
       }
-
-
-// 🔥 NOVA STORE PARA HISTÓRICO DE COMPRAS
-  if (!db.objectStoreNames.contains(STORE_COMPRAS)) {
-    db.createObjectStore(STORE_COMPRAS, {
-      keyPath: "id",
-      autoIncrement: true
-    });
-  }
-};
+    };
+  });
+}
 
 /* ================= NORMALIZAR ================= */
 
@@ -733,48 +725,6 @@ async function excluirItem(id) {
 }
 
 
-/* ================= Fnalizar compra ================= */
-
-/* ================= FINALIZAR COMPRA ================= */
-
-async function finalizarCompra() {
-
-  const itens = await getItems();
-
-  if (!itens || itens.length === 0) {
-    alert("Nenhum item no carrinho.");
-    falar("Nenhum item no carrinho.");
-    return;
-  }
-
-  let total = 0;
-
-  itens.forEach(item => {
-    total += item.quantidade * item.preco;
-  });
-
-  const compra = {
-    data: new Date().toISOString(),
-    itens: itens,
-    total: total
-  };
-
-  const tx = db.transaction(STORE_COMPRAS, "readwrite");
-  const store = tx.objectStore(STORE_COMPRAS);
-  store.add(compra);
-
-  tx.oncomplete = async () => {
-
-    await limparCarrinho();
-    await renderList();
-
-    alert("Compra finalizada com sucesso!");
-    falar("Compra finalizada com sucesso.");
-  };
-}
-
-
-
 
 /* ================= VOZ ================= */
 
@@ -818,7 +768,7 @@ function startVoice() {
         bloqueioVoz = false;
       }, 1500);
 
-      // Confirmação guia
+      // Confirmação de cadastro da guia
       if (produtoPendenteCadastro) {
 
         if (frase.includes("sim")) {
@@ -833,28 +783,37 @@ function startVoice() {
         }
       }
 
-      // Orçamento
-      if (frase.includes("orcamento")) {
-        const valor = extrairNumero(frase);
-        if (valor) {
-          document.getElementById("orcamento").innerText =
-            "R$ " + valor.toFixed(2);
-          falar("Orçamento definido.");
-        }
-        return;
-      }
 
-      // Deslocamento
-      if (frase.includes("deslocamento")) {
-        const valor = extrairNumero(frase);
-        if (valor) {
-          document.getElementById("deslocamento").innerText =
-            "R$ " + valor.toFixed(2);
-          falar("Deslocamento definido.");
-        }
-        return;
-      }
 
+// Definir orçamento por voz
+if (frase.includes("orcamento")) {
+  const valor = extrairNumero(frase);
+  if (valor) {
+    document.getElementById("orcamento").innerText =
+      "R$ " + valor.toFixed(2);
+    falar("Orçamento definido.");
+  }
+  return;
+}
+
+// Definir deslocamento por voz
+if (frase.includes("deslocamento")) {
+  const valor = extrairNumero(frase);
+  if (valor) {
+    document.getElementById("deslocamento").innerText =
+      "R$ " + valor.toFixed(2);
+    falar("Deslocamento definido.");
+  }
+  return;
+}
+
+
+
+
+
+
+
+      // Execução normal
       const cadastrado =
         await processarCadastroPorVoz(fraseOriginal);
 
@@ -867,15 +826,8 @@ function startVoice() {
 
       if (frase.includes("iniciar compra")) {
         iniciarFluxo();
-        return;
       }
-
-      if (frase.includes("finalizar compra")) {
-        await finalizarCompra();
-        return;
-      }
-
-    }; // ✅ FECHA onresult CORRETAMENTE
+    };
 
     recognition.onend = () => {
       if (ouvindo) {
@@ -892,6 +844,8 @@ function startVoice() {
     recognition.stop();
   }
 }
+
+
  
 /* ================= MENU LATERAL ================= */
 
