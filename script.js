@@ -374,16 +374,25 @@ const numerosExtenso = {
 };
 
 function extrairNumero(texto) {
-  const numeroDigito = texto.match(/\d+/);
-  if (numeroDigito) return parseInt(numeroDigito[0]);
+
+  // aceita 32.50 ou 32,50
+  const numeroDecimal = texto.match(/\d+[.,]?\d*/);
+
+  if (numeroDecimal) {
+    return parseFloat(
+      numeroDecimal[0].replace(",", ".")
+    );
+  }
 
   for (let palavra in numerosExtenso) {
     if (texto.includes(palavra)) {
       return numerosExtenso[palavra];
     }
   }
+
   return null;
 }
+
 
 /* ================= CADASTRO POR VOZ ================= */
 
