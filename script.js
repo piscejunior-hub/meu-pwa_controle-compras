@@ -433,27 +433,43 @@ let fluxo = {
 
 async function iniciarFluxo() {
 
+  const orcamento = obterValorMonetario("orcamento");
 
-const orcamento = obterValorMonetario("orcamento");
+  if (orcamento <= 0) {
+    alert("Defina um orçamento antes de iniciar.");
+    falar("Defina um orçamento antes de iniciar.");
+    return;
+  }
 
-if (orcamento <= 0) {
-  alert("Defina um orçamento antes de iniciar.");
-  falar("Defina um orçamento antes de iniciar.");
-  return;
-}
-
-
-
+  // 🔥 1️⃣ Limpa banco
   await limparCarrinho();
-  await renderList();
 
+  // 🔥 2️⃣ Limpa visual imediatamente
+  const lista = document.getElementById("lista");
+  if (lista) lista.innerHTML = "";
+
+  const totalEl = document.getElementById("total");
+  if (totalEl) {
+    totalEl.innerHTML = `
+      Total Compras: R$ 0.00 <br>
+      Deslocamento: R$ ${obterValorMonetario("deslocamento").toFixed(2)} <br>
+      <strong>Total Geral: R$ ${obterValorMonetario("deslocamento").toFixed(2)}</strong><br>
+      <span style="color:lime">
+        Orçamento Restante: R$ ${(orcamento - obterValorMonetario("deslocamento")).toFixed(2)}
+      </span>
+    `;
+  }
+
+  // 🔥 3️⃣ Limpa consumo e formulário
   document.getElementById("listaConsumo").innerHTML = "";
   document.getElementById("formCompra").innerHTML = "";
 
+  // 🔥 4️⃣ Reseta fluxo
   fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
 
-  falar("Compra para quantos dias?");
+  falar("Nova compra iniciada. Compra para quantos dias?");
 }
+
 
 /* ================= PROCESSAR FLUXO ================= */
 
