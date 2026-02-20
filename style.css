@@ -424,4 +424,56 @@ flex-direction:column;
 
 }
 
+/* ================= AÇÕES (HISTÓRICO + VOZ) ================= */
+
+.botoes-acoes{
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+gap:14px; /* 👈 separa os botões */
+
+flex-wrap:wrap;
+
+margin-bottom:12px;
+
+}
+
+/* botão histórico */
+
+.btn-historico{
+
+width:auto;
+
+padding:10px 16px;
+
+}
+
+/* botão voz */
+
+.voice-btn{
+
+width:auto;
+
+max-width:none;
+
+margin:0;
+
+padding:10px 16px;
+
+}
+
+/* efeito premium */
+
+.botoes-acoes button{
+
+box-shadow:
+
+0 6px 18px rgba(0,0,0,.4);
+
+}
+
 }
