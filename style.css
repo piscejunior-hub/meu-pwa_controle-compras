@@ -1,4 +1,5 @@
-/* ================= ROOT (PADRÃO DE DESIGN) ================= */
+/* ================= ROOT ================= */
+
 :root {
   --bg-dark: #0d0d0d;
   --bg-card-1: #1e1b2f;
@@ -14,324 +15,376 @@
 }
 
 /* ================= RESET ================= */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
 }
 
-html {
-  -webkit-tap-highlight-color: transparent;
-  scroll-behavior: smooth;
+html{
+-webkit-tap-highlight-color:transparent;
+scroll-behavior:smooth;
 }
 
-body {
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  background: linear-gradient(145deg, var(--bg-dark), #1c1c1c);
-  min-height: 100vh;
-  padding: 16px;
-  color: var(--text-light);
+body{
+
+font-family:"Segoe UI",Roboto,Arial,sans-serif;
+
+background:linear-gradient(145deg,var(--bg-dark),#1c1c1c);
+
+min-height:100vh;
+
+padding:16px;
+
+color:var(--text-light);
+
 }
 
-/* ================= TÍTULO ================= */
-h1 {
-  text-align: center;
-  color: #e0c3fc;
-  margin-bottom: 24px;
-  font-size: 2rem;
-  font-weight: 700;
-  text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+/* ================= TITULO ================= */
+
+h1{
+
+text-align:center;
+
+color:#e0c3fc;
+
+margin:20px auto;
+
+font-size:1.9rem;
+
+font-weight:700;
+
 }
 
-/* ================= LAYOUT PRINCIPAL ================= */
+/* ================= LAYOUT ⭐ MELHORADO ================= */
 
-.layout {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
+.layout{
+
+display:flex;
+
+gap:20px;
+
+align-items:flex-start;
+
+max-width:1200px;
+
+margin:auto;
+
+flex-wrap:wrap;
+
 }
 
-.coluna-esquerda {
-  flex: 1;
-  min-width: 0;
+.coluna-esquerda{
+
+flex:1 1 360px;
+
+min-width:300px;
+
 }
 
-.coluna-direita {
-  flex: 1;
-  min-width: 0;
-  position: sticky;
-  top: 16px;
+.coluna-direita{
+
+flex:1 1 450px;
+
+min-width:320px;
+
+/* sticky só PC */
+
+position:sticky;
+
+top:16px;
+
 }
 
-/* ================= CARDS ================= */
-.card {
-  background: linear-gradient(145deg, var(--bg-card-1), var(--bg-card-2));
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 22px;
-  box-shadow: var(--shadow-strong);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* ================= CARDS ⭐ ================= */
+
+.card{
+
+background:linear-gradient(
+145deg,
+var(--bg-card-1),
+var(--bg-card-2)
+);
+
+border-radius:18px;
+
+padding:16px;
+
+margin-bottom:16px;
+
+box-shadow:var(--shadow-strong);
+
 }
 
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.45);
-}
+/* ================= INPUT ================= */
 
-/* ================= INPUTS ================= */
 input,
 select,
-textarea {
-  width: 100%;
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid var(--border-glow);
-  margin-bottom: 14px;
-  font-size: 15px;
-  background-color: #2a243f;
-  color: #fff;
-  transition: all 0.2s ease;
+textarea{
+
+width:100%;
+
+padding:12px;
+
+border-radius:14px;
+
+border:1px solid var(--border-glow);
+
+margin-bottom:12px;
+
+background:#2a243f;
+
+color:#fff;
+
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--text-muted);
-  box-shadow: 0 0 8px rgba(217, 167, 255, 0.5);
-  outline: none;
+/* ================= BOTÕES ⭐ AJUSTADO ================= */
+
+button{
+
+background:linear-gradient(
+135deg,
+var(--primary),
+var(--primary-dark)
+);
+
+color:white;
+
+border:none;
+
+padding:12px 14px;
+
+border-radius:12px;
+
+font-size:14px;
+
+font-weight:700;
+
+cursor:pointer;
+
+width:100%;
+
+transition:.15s;
+
 }
 
-/* ================= BOTÕES ================= */
-button {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #fff;
-  border: none;
-  padding: 16px;
-  border-radius: 18px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  width: 100%;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+button:hover{
+
+transform:translateY(-1px);
+
 }
 
-button:hover {
-  transform: scale(1.02);
+/* FINALIZAR COMPRA */
+
+.btn-finalizar{
+
+padding:14px;
+
+font-size:15px;
+
+margin-bottom:14px;
+
 }
 
-button:active {
-  transform: scale(0.98);
-  opacity: 0.85;
-}
+/* ================= VOICE BUTTON ⭐ ================= */
 
-button.secondary {
-  background: linear-gradient(135deg, #5a189a, var(--secondary));
-}
+.voice-btn{
 
-.card button + button {
-  margin-top: 12px;
+max-width:420px;
+
+margin:0 auto 12px auto;
+
+display:block;
+
 }
 
 /* ================= LISTAS ================= */
-#shoppingList {
-  list-style: none;
-  margin-top: 12px;
-}
 
-/* Lista de consumo */
-#listaConsumo div {
-  background: var(--bg-item);
-  padding: 14px;
-  border-radius: 14px;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
+#listaConsumo div{
 
-#listaConsumo button {
-  margin-top: 10px;
-  font-size: 14px;
-  padding: 10px;
+background:var(--bg-item);
+
+padding:12px;
+
+border-radius:12px;
+
+margin-bottom:10px;
+
+font-size:14px;
+
 }
 
 /* ================= ITEM ================= */
-.item-card {
-  background: var(--bg-item);
-  border-radius: 18px;
-  padding: 16px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  transition: background 0.2s ease;
+
+.item-card{
+
+background:var(--bg-item);
+
+border-radius:14px;
+
+padding:14px;
+
+margin-bottom:12px;
+
 }
 
-.item-card:hover {
-  background: #4b3a73;
+/* ================= RESPONSIVO ⭐ ================= */
+
+@media(max-width:900px){
+
+.layout{
+
+flex-direction:column;
+
 }
 
-/* ================= ABAS ================= */
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+.coluna-direita{
+
+position:relative;
+
+top:0;
+
 }
 
-.tabs button {
-  flex: 1;
-  padding: 14px;
-  border-radius: 16px;
-  font-size: 14px;
-  font-weight: 700;
-  background: linear-gradient(145deg, var(--bg-card-2), var(--bg-card-1));
-  color: var(--text-muted);
-  border: 1px solid var(--border-glow);
 }
 
-.tabs button.active {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #fff;
-  border: none;
+/* ================= MENU ⭐ MELHORADO ================= */
+
+#menuBtn{
+
+position:fixed;
+
+top:10px;
+
+left:10px;
+
+font-size:20px;
+
+background:#2c3e50;
+
+color:white;
+
+border:none;
+
+padding:10px 14px;
+
+border-radius:8px;
+
+z-index:1000;
+
+width:auto; /* ⭐ evita botão gigante */
+
 }
 
-/* ================= CONTEÚDO DAS ABAS ================= */
-.tab {
-  display: none;
-  animation: fadeIn 0.2s ease-in;
+.menu-lateral{
+
+position:fixed;
+
+left:-260px;
+
+top:0;
+
+width:250px;
+
+height:100%;
+
+background:#34495e;
+
+padding:20px;
+
+transition:.3s;
+
+z-index:999;
+
+overflow-y:auto;
+
 }
 
-.tab.active {
-  display: block;
+.menu-lateral button{
+
+width:100%;
+
+margin:8px 0;
+
+padding:10px;
+
+font-size:14px;
+
+background:#2c3e50;
+
+border-radius:8px;
+
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+.fechar-menu{
+
+background:#e74c3c;
+
 }
 
-/* ================= CUPOM FISCAL ================= */
-.cupom {
-  background: #ffffff;
-  color: #000;
-  font-family: "Courier New", monospace;
-  font-size: 13px;
-  padding: 16px;
-  border-radius: 6px;
-  margin-top: 10px;
-  white-space: pre-wrap;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+/* ================= ABA LATERAL ⭐ ================= */
+
+.aba-lateral{
+
+display:none;
+
+position:fixed;
+
+right:0;
+
+top:0;
+
+width:420px;
+
+max-width:95%;
+
+height:100%;
+
+background:linear-gradient(
+145deg,
+var(--bg-card-1),
+var(--bg-card-2)
+);
+
+padding:20px;
+
+overflow-y:auto;
+
+z-index:998;
+
+box-shadow:-10px 0 30px rgba(0,0,0,.5);
+
 }
 
-/* ================= RESPONSIVO ================= */
-@media (max-width: 900px) {
-  .layout {
-    flex-direction: column;
-  }
+/* ================= GUIA ================= */
 
-  .coluna-direita {
-    position: relative;
-    top: 0;
-  }
+.guia-item{
+
+background:var(--bg-item);
+
+padding:12px;
+
+border-radius:12px;
+
+margin-bottom:10px;
+
+font-size:14px;
+
+color:var(--text-muted);
+
 }
 
-@media (max-width: 480px) {
+.guia-item strong{
 
-  body {
-    padding: 12px;
-  }
+color:white;
 
-  h1 {
-    font-size: 1.6rem;
-  }
-
-  button {
-    font-size: 15px;
-    padding: 14px;
-  }
-
-  .item-card {
-    font-size: 13px;
-  }
-
-  .card {
-    padding: 16px;
-  }
 }
 
-/* ================= PERFORMANCE TOUCH MOBILE ================= */
-button,
-input {
-  touch-action: manipulation;
+/* ================= TOUCH ================= */
+
+button,input{
+
+touch-action:manipulation;
+
 }
-
-/* ================= Menu ================= */
-
-#menuBtn {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  font-size: 22px;
-  background: #2c3e50;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
-  z-index: 1000;
-}
-
-.menu-lateral {
-  position: fixed;
-  left: -260px;
-  top: 0;
-  width: 250px;
-  height: 100%;
-  background: #34495e;
-  color: white;
-  padding: 20px;
-  transition: 0.3s;
-  z-index: 999;
-}
-
-.menu-lateral button {
-  width: 100%;
-  margin: 10px 0;
-  padding: 10px;
-  border: none;
-  background: #2c3e50;
-  color: white;
-  border-radius: 5px;
-}
-
-.fechar-menu {
-  background: red;
-}
-
-.aba-lateral {
-  display: none;
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 90%;
-  height: 100%;
-  background: linear-gradient(145deg, var(--bg-card-1), var(--bg-card-2));
-  color: var(--text-light);
-  padding: 20px;
-  overflow-y: auto;
-  z-index: 998;
-}
-
-.guia-item {
-  background: var(--bg-item);
-  padding: 14px;
-  border-radius: 14px;
-  margin-bottom: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.guia-item strong {
-  color: #ffffff;
-}
-
-.guia-item {
-  color: var(--text-muted);
-}
-
