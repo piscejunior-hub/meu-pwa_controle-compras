@@ -945,6 +945,116 @@ async function carregarProdutosNaAba() {
     `;
   });
 }
+
+
+
+/* ================= HISTORICO ================= */
+
+function getComprasHistorico(){
+
+return new Promise(resolve=>{
+
+const tx =
+db.transaction(STORE_COMPRAS,"readonly");
+
+tx.objectStore(STORE_COMPRAS)
+.getAll()
+.onsuccess=e=>resolve(e.target.result || []);
+
+});
+
+}
+
+
+
+
+async function mostrarHistorico(){
+
+const container =
+document.getElementById("historicoLista");
+
+if(!container) return;
+
+const compras =
+await getComprasHistorico();
+
+if(compras.length === 0){
+
+container.innerHTML =
+"<p>Nenhuma compra registrada.</p>";
+
+return;
+
+}
+
+container.innerHTML="";
+
+compras.reverse().forEach(c=>{
+
+container.innerHTML +=`
+
+<div style="padding:10px;border-bottom:1px solid #444">
+
+📅 ${new Date(c.data).toLocaleDateString()}<br>
+
+💰 Total: R$ ${c.total.toFixed(2)}
+
+</div>
+
+`;
+
+});
+
+calcularEconomia();
+
+}
+
+
+
+async function calcularEconomia(){
+
+const compras =
+await getComprasHistorico();
+
+const economiaEl =
+document.getElementById("economia");
+
+if(!economiaEl) return;
+
+if(compras.length <2){
+
+economiaEl.innerText =
+"Sem comparação ainda.";
+
+return;
+
+}
+
+compras.sort((a,b)=>
+new Date(b.data)-new Date(a.data));
+
+const atual = compras[0];
+const anterior = compras[1];
+
+const economia =
+anterior.total - atual.total;
+
+if(economia>0){
+
+economiaEl.innerText =
+`Você economizou R$ ${economia.toFixed(2)}`;
+
+}else{
+
+economiaEl.innerText =
+`Gastou R$ ${Math.abs(economia).toFixed(2)} a mais`;
+
+}
+
+}
+
+
+
 /* ================= START ================= */
 
 window.onload = async () => {
