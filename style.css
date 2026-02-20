@@ -1,71 +1,110 @@
 /* ================= ROOT ================= */
 
-:root {
-  --bg-dark: #0d0d0d;
-  --bg-card-1: #1e1b2f;
-  --bg-card-2: #2d2540;
-  --bg-item: #3a2c5d;
-  --primary: #8e2de2;
-  --primary-dark: #4a00e0;
-  --secondary: #7b2cbf;
-  --text-light: #f5f5f5;
-  --text-muted: #d9a7ff;
-  --border-glow: rgba(138, 43, 226, 0.6);
-  --shadow-strong: 0 15px 40px rgba(0, 0, 0, 0.35);
+:root{
+
+--bg:#0c0c14;
+
+--card1:#1f1b32;
+
+--card2:#2c2445;
+
+--primary:#8e2de2;
+
+--primary2:#4a00e0;
+
+--green:#2ecc71;
+
+--red:#ff4d6d;
+
+--text:#ffffff;
+
+--muted:#d9a7ff;
+
 }
 
 /* ================= RESET ================= */
 
 *{
-margin:0;
-padding:0;
-box-sizing:border-box;
-}
 
-html{
--webkit-tap-highlight-color:transparent;
-scroll-behavior:smooth;
+margin:0;
+
+padding:0;
+
+box-sizing:border-box;
+
 }
 
 body{
 
-font-family:"Segoe UI",Roboto,Arial,sans-serif;
+font-family:Segoe UI,Arial;
 
-background:linear-gradient(145deg,var(--bg-dark),#1c1c1c);
+background:linear-gradient(150deg,#0d0d16,#1a1a28);
 
-min-height:100vh;
+color:white;
 
-padding:16px;
-
-color:var(--text-light);
+padding:70px 14px 20px;
 
 }
 
-/* ================= TITULO ================= */
+/* ================= HEADER FIXO ================= */
 
 h1{
 
+position:fixed;
+
+top:0;
+
+left:0;
+
+width:100%;
+
+background:#222c38;
+
+padding:12px;
+
 text-align:center;
 
-color:#e0c3fc;
+z-index:900;
 
-margin:20px auto;
+box-shadow:0 5px 18px rgba(0,0,0,.5);
 
-font-size:1.9rem;
-
-font-weight:700;
+font-size:20px;
 
 }
 
-/* ================= LAYOUT ⭐ MELHORADO ================= */
+/* ================= MENU ================= */
+
+#menuBtn{
+
+position:fixed;
+
+top:8px;
+
+left:10px;
+
+background:#2c3e50;
+
+color:white;
+
+border:none;
+
+padding:8px 12px;
+
+border-radius:8px;
+
+width:auto;
+
+z-index:1000;
+
+}
+
+/* ================= LAYOUT ================= */
 
 .layout{
 
 display:flex;
 
-gap:20px;
-
-align-items:flex-start;
+gap:18px;
 
 max-width:1200px;
 
@@ -77,34 +116,28 @@ flex-wrap:wrap;
 
 .coluna-esquerda{
 
-flex:1 1 360px;
-
-min-width:300px;
+flex:1 1 380px;
 
 }
 
 .coluna-direita{
 
-flex:1 1 450px;
-
-min-width:320px;
-
-/* sticky só PC */
+flex:1 1 460px;
 
 position:sticky;
 
-top:16px;
+top:70px;
 
 }
 
-/* ================= CARDS ⭐ ================= */
+/* ================= CARD ================= */
 
 .card{
 
 background:linear-gradient(
 145deg,
-var(--bg-card-1),
-var(--bg-card-2)
+var(--card1),
+var(--card2)
 );
 
 border-radius:18px;
@@ -113,57 +146,39 @@ padding:16px;
 
 margin-bottom:16px;
 
-box-shadow:var(--shadow-strong);
+box-shadow:
+
+0 10px 30px rgba(0,0,0,.4);
 
 }
 
-/* ================= INPUT ================= */
-
-input,
-select,
-textarea{
-
-width:100%;
-
-padding:12px;
-
-border-radius:14px;
-
-border:1px solid var(--border-glow);
-
-margin-bottom:12px;
-
-background:#2a243f;
-
-color:#fff;
-
-}
-
-/* ================= BOTÕES ⭐ AJUSTADO ================= */
+/* ================= BOTÕES ================= */
 
 button{
 
-background:linear-gradient(
+background:
+
+linear-gradient(
 135deg,
 var(--primary),
-var(--primary-dark)
+var(--primary2)
 );
-
-color:white;
 
 border:none;
 
-padding:12px 14px;
+color:white;
+
+padding:11px;
 
 border-radius:12px;
 
-font-size:14px;
-
-font-weight:700;
+font-weight:bold;
 
 cursor:pointer;
 
 width:100%;
+
+font-size:14px;
 
 transition:.15s;
 
@@ -175,107 +190,139 @@ transform:translateY(-1px);
 
 }
 
-/* FINALIZAR COMPRA */
+/* FINALIZAR */
 
 .btn-finalizar{
 
-padding:14px;
-
 font-size:15px;
 
-margin-bottom:14px;
+padding:13px;
+
+margin-bottom:15px;
 
 }
 
-/* ================= VOICE BUTTON ⭐ ================= */
+/* ================= VOICE ================= */
 
 .voice-btn{
 
 max-width:420px;
 
-margin:0 auto 12px auto;
+margin:auto;
 
 display:block;
 
+margin-bottom:10px;
+
 }
 
-/* ================= LISTAS ================= */
+/* ================= INPUT ================= */
 
-#listaConsumo div{
+input,select{
 
-background:var(--bg-item);
+width:100%;
 
 padding:12px;
 
 border-radius:12px;
 
+border:none;
+
 margin-bottom:10px;
 
-font-size:14px;
-
-}
-
-/* ================= ITEM ================= */
-
-.item-card{
-
-background:var(--bg-item);
-
-border-radius:14px;
-
-padding:14px;
-
-margin-bottom:12px;
-
-}
-
-/* ================= RESPONSIVO ⭐ ================= */
-
-@media(max-width:900px){
-
-.layout{
-
-flex-direction:column;
-
-}
-
-.coluna-direita{
-
-position:relative;
-
-top:0;
-
-}
-
-}
-
-/* ================= MENU ⭐ MELHORADO ================= */
-
-#menuBtn{
-
-position:fixed;
-
-top:10px;
-
-left:10px;
-
-font-size:20px;
-
-background:#2c3e50;
+background:#2a2442;
 
 color:white;
 
-border:none;
+}
 
-padding:10px 14px;
+/* ================= TOTAL PREMIUM ================= */
 
-border-radius:8px;
+#total{
 
-z-index:1000;
+font-size:18px;
 
-width:auto; /* ⭐ evita botão gigante */
+font-weight:bold;
+
+color:#fff;
 
 }
+
+/* ================= HISTÓRICO TIMELINE ================= */
+
+#historicoLista{
+
+border-left:3px solid #8e2de2;
+
+padding-left:14px;
+
+margin-top:10px;
+
+}
+
+.historico-item{
+
+background:#342a56;
+
+margin-bottom:10px;
+
+padding:12px;
+
+border-radius:10px;
+
+position:relative;
+
+}
+
+.historico-item::before{
+
+content:"";
+
+width:10px;
+
+height:10px;
+
+background:#8e2de2;
+
+border-radius:50%;
+
+position:absolute;
+
+left:-19px;
+
+top:18px;
+
+}
+
+/* ================= ECONOMIA ================= */
+
+#economia{
+
+font-size:18px;
+
+font-weight:bold;
+
+margin-top:10px;
+
+}
+
+/* economia positiva */
+
+.economia-positiva{
+
+color:var(--green);
+
+}
+
+/* economia negativa */
+
+.economia-negativa{
+
+color:var(--red);
+
+}
+
+/* ================= MENU LATERAL ================= */
 
 .menu-lateral{
 
@@ -289,7 +336,7 @@ width:250px;
 
 height:100%;
 
-background:#34495e;
+background:#2b3441;
 
 padding:20px;
 
@@ -303,27 +350,13 @@ overflow-y:auto;
 
 .menu-lateral button{
 
-width:100%;
-
 margin:8px 0;
 
-padding:10px;
-
-font-size:14px;
-
-background:#2c3e50;
-
-border-radius:8px;
+background:#394b5f;
 
 }
 
-.fechar-menu{
-
-background:#e74c3c;
-
-}
-
-/* ================= ABA LATERAL ⭐ ================= */
+/* ================= ABA ================= */
 
 .aba-lateral{
 
@@ -335,25 +368,25 @@ right:0;
 
 top:0;
 
+height:100%;
+
 width:420px;
 
 max-width:95%;
 
-height:100%;
+background:
 
-background:linear-gradient(
+linear-gradient(
 145deg,
-var(--bg-card-1),
-var(--bg-card-2)
+var(--card1),
+var(--card2)
 );
-
-padding:20px;
 
 overflow-y:auto;
 
-z-index:998;
+padding:20px;
 
-box-shadow:-10px 0 30px rgba(0,0,0,.5);
+z-index:998;
 
 }
 
@@ -361,30 +394,34 @@ box-shadow:-10px 0 30px rgba(0,0,0,.5);
 
 .guia-item{
 
-background:var(--bg-item);
+background:#3a2f5e;
 
-padding:12px;
+padding:10px;
 
-border-radius:12px;
+border-radius:10px;
 
-margin-bottom:10px;
+margin-bottom:8px;
 
-font-size:14px;
-
-color:var(--text-muted);
+color:#d9a7ff;
 
 }
 
-.guia-item strong{
+/* ================= RESPONSIVO ================= */
 
-color:white;
+@media(max-width:900px){
+
+.coluna-direita{
+
+position:relative;
+
+top:0;
 
 }
 
-/* ================= TOUCH ================= */
+.layout{
 
-button,input{
+flex-direction:column;
 
-touch-action:manipulation;
+}
 
 }
