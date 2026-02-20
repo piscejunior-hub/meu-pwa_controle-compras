@@ -30,6 +30,11 @@
   </button>
 </div>
 
+<button onclick="mostrarAba('abaHistorico')">
+📜 Histórico e Economia
+</button>
+
+
 
 <h1>🛒 Lista de Compras Inteligente</h1>
 
@@ -70,7 +75,7 @@
     </div>
 
 
-<div id="abaHistorico" class="aba-lateral">
+
 
 <h3>📜 Histórico</h3>
 
@@ -166,10 +171,16 @@
 </script>
 
 <!-- ABA GUIA DE CONSUMO COMPLETA -->
+<div id="abaHistorico" class="aba-lateral" style="display:none;">
 
-<div id="abaConsultarProdutos" class="aba-lateral" style="display:none;">
-  <h2>Consultar Produtos</h2>
-  <div id="listaConsultaProdutos"></div>
+<h2>📜 Histórico</h2>
+
+<div id="historicoLista"></div>
+
+<h3>💰 Economia</h3>
+
+<p id="economia">---</p>
+
 </div>
 
 <div id="abaGuia" class="aba-lateral">
@@ -263,8 +274,7 @@
 </html>
 
 
-</body>
-</html>
+
 
 
 
