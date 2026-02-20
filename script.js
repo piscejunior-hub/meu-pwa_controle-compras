@@ -925,6 +925,10 @@ function mostrarAba(id) {
     carregarProdutosNaAba();
   }
 
+if(id === "abaHistorico"){
+mostrarHistorico();
+}
+
   // Fecha o menu lateral
   fecharMenu();
 }
