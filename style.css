@@ -72,6 +72,21 @@ font-size:20px;
 
 }
 
+
+
+.voice-btn{
+
+display:block;
+
+margin:25px auto 10px auto;
+
+max-width:420px;
+
+}
+
+
+
+
 /* ================= MENU ================= */
 
 #menuBtn{
@@ -489,4 +504,17 @@ margin:8px;
 }
 
 
+/* ===== ESPAÇO ENTRE BOTÕES SUPERIORES ===== */
+
+#voiceBtn{
+
+margin-top:20px;
+
+}
+
+body{
+
+padding-top:95px;
+
+}
 
