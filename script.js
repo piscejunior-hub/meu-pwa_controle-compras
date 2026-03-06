@@ -627,6 +627,9 @@ function mostrarConsumo(listaProdutos) {
 
     const div = document.createElement("div");
 
+    // 🔥 ID único para poder remover depois
+    div.id = "card-" + normalizar(item.nome);
+
     div.innerHTML = `
       <div style="margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:8px;">
         <strong>${item.nome.toUpperCase()}</strong><br><br>
@@ -641,6 +644,7 @@ function mostrarConsumo(listaProdutos) {
     container.appendChild(div);
   });
 }
+
 
 /* ================= PREPARAR + CONFIRMAR ================= */
 
@@ -681,8 +685,13 @@ async function confirmarCompra(nome) {
     "<p style='color:#aaa;'>Compra adicionada!</p>";
 
   falar("Produto adicionado ao carrinho.");
-}
 
+  // 🔥 REMOVE DA TELA DE CONSUMO
+  const card = document.getElementById("card-" + normalizar(nome));
+  if (card) {
+    card.remove();
+  }
+}
 
 
 
