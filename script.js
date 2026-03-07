@@ -449,6 +449,7 @@ async function processarCadastroPorVoz(frase) {
 let fluxo = {
   ativo: false,
   etapa: 0,
+  mercado: "",
   dias: 0,
   pessoas: 0
 };
@@ -487,50 +488,87 @@ async function iniciarFluxo() {
   document.getElementById("formCompra").innerHTML = "";
 
   // 🔥 4️⃣ Reseta fluxo
-  fluxo = { ativo: true, etapa: 1, dias: 0, pessoas: 0 };
+  fluxo = { ativo: true, etapa: 1, mercado: "", dias: 0, pessoas: 0 };
 
-  falar("Nova compra iniciada. Compra para quantos dias?");
-}
+falar("Nova compra iniciada. Em qual mercado você está?");
+
+}  
 
 
 /* ================= PROCESSAR FLUXO ================= */
 
 async function processarFluxo(frase) {
 
+  if (!fluxo.ativo) return;
+
   frase = normalizar(frase);
 
+  /* ================= MERCADO ================= */
+
   if (fluxo.etapa === 1) {
-    const dias = extrairNumero(frase);
-    if (!dias) {
-      falar("Não entendi os dias.");
-      return;
+
+    fluxo.mercado = frase;
+
+    const campoMercado = document.getElementById("nomeMercado");
+    if (campoMercado) {
+      campoMercado.value = frase;
     }
-    fluxo.dias = dias;
+
     fluxo.etapa = 2;
-    falar("Quantas pessoas?");
+
+    falar("Compra para quantos dias?");
+
     return;
   }
+
+  /* ================= DIAS ================= */
 
   if (fluxo.etapa === 2) {
-    const pessoas = extrairNumero(frase);
-    if (!pessoas) {
-      falar("Não entendi as pessoas.");
+
+    const dias = extrairNumero(frase);
+
+    if (!dias) {
+      falar("Não entendi quantos dias. Diga por exemplo: 7 dias.");
       return;
     }
-    fluxo.pessoas = pessoas;
+
+    fluxo.dias = dias;
     fluxo.etapa = 3;
-    falar("Quais produtos deseja comprar?");
+
+    falar(`Compra para ${dias} dias. Quantas pessoas na casa?`);
+
     return;
   }
 
+  /* ================= PESSOAS ================= */
+
   if (fluxo.etapa === 3) {
+
+    const pessoas = extrairNumero(frase);
+
+    if (!pessoas) {
+      falar("Não entendi quantas pessoas. Diga por exemplo: 4 pessoas.");
+      return;
+    }
+
+    fluxo.pessoas = pessoas;
+    fluxo.etapa = 4;
+
+    falar(`Ok. ${pessoas} pessoas. Agora diga os produtos que deseja comprar.`);
+
+    return;
+  }
+
+  /* ================= PRODUTOS ================= */
+
+  if (fluxo.etapa === 4) {
 
     const produtos = await getProdutos();
     let listaProdutos = [];
 
     for (const produtoObj of produtos) {
 
-      const produto = produtoObj.nome;
+      const produto = normalizar(produtoObj.nome);
 
       if (frase.includes(produto)) {
 
@@ -542,6 +580,8 @@ async function processarFluxo(frase) {
 
         let quantidadeCompra = 0;
         let detalhe = "";
+
+        /* ===== PRODUTO EM KG ===== */
 
         if (tipo === "kg") {
 
@@ -565,7 +605,7 @@ async function processarFluxo(frase) {
             detalhe = `
               Total necessário: ${totalNecessario.toFixed(2)} kg<br>
               Pacote informado: ${pesoPacote} kg<br>
-              <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote}kg</strong>
+              <strong>Sugestão: ${quantidadeCompra} pacotes de ${pesoPacote} kg</strong>
             `;
 
           } else {
@@ -579,24 +619,32 @@ async function processarFluxo(frase) {
           }
         }
 
+        /* ===== PRODUTO EM LITRO ===== */
+
         if (tipo === "litro") {
+
           quantidadeCompra = Math.ceil(totalNecessario);
+
           detalhe = `
             Total necessário: ${totalNecessario.toFixed(2)} litros<br>
             <strong>Sugestão: ${quantidadeCompra} litros</strong>
           `;
         }
 
+        /* ===== PRODUTO EM UNIDADE ===== */
+
         if (tipo === "unidade") {
+
           quantidadeCompra = Math.ceil(totalNecessario);
+
           detalhe = `
-            Total necessário: ${totalNecessario} unidades<br>
+            Total necessário: ${Math.ceil(totalNecessario)} unidades<br>
             <strong>Sugestão: ${quantidadeCompra} unidades</strong>
           `;
         }
 
         listaProdutos.push({
-          nome: produto,
+          nome: produtoObj.nome,
           quantidade: quantidadeCompra,
           detalhe
         });
@@ -604,11 +652,14 @@ async function processarFluxo(frase) {
     }
 
     if (listaProdutos.length === 0) {
-      falar("Nenhum produto reconhecido.");
+
+      falar("Nenhum produto reconhecido. Tente falar novamente os produtos.");
+
       return;
     }
 
     mostrarConsumo(listaProdutos);
+
     falar("Cálculo concluído.");
 
     fluxo.ativo = false;
