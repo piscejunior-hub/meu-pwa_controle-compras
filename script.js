@@ -822,9 +822,10 @@ async function finalizarCompra() {
 
 const compra = {
   data: new Date().toISOString(),
-  mercado: nomeMercado || "Mercado não informado",
+  mercado: fluxo.mercado,
   itens: itens,
-  total: total
+  total: total,
+  status: "aberta"
 };
 
   const tx = db.transaction(STORE_COMPRAS, "readwrite");
@@ -842,6 +843,40 @@ const compra = {
 }
 
 
+/* ================= RETOMAR ÚLTIMA COMPRA ================= */
+
+async function retomarUltimaCompra() {
+
+  const tx = db.transaction(STORE_COMPRAS, "readonly");
+  const store = tx.objectStore(STORE_COMPRAS);
+
+  const req = store.getAll();
+
+  req.onsuccess = async () => {
+
+    const compras = req.result;
+
+    if (!compras.length) {
+      falar("Nenhuma compra encontrada.");
+      return;
+    }
+
+    const ultima = compras[compras.length - 1];
+
+    if (ultima.status !== "aberta") {
+      falar("A última compra já foi finalizada.");
+      return;
+    }
+
+    for (const item of ultima.itens) {
+      await addItem(item);
+    }
+
+    await renderList();
+
+    falar("Compra retomada. Você pode adicionar novos produtos.");
+  };
+}
 
 
 /* ================= VOZ ================= */
@@ -942,6 +977,38 @@ function startVoice() {
         await finalizarCompra();
         return;
       }
+
+
+/* ================= ESQUECI PRODUTO ================= */
+
+if (frase.includes("esqueci")) {
+
+  const produto = frase
+    .replace("esqueci de comprar", "")
+    .replace("esqueci comprar", "")
+    .replace("esqueci", "")
+    .trim();
+
+  if (!produto) {
+    falar("O que você esqueceu de comprar?");
+    return;
+  }
+
+  await retomarUltimaCompra();
+
+  await addItem(produto, 1, 0);
+
+  await renderList();
+
+  falar(`Retomando compra. ${produto} adicionado.`);
+
+  return;
+}
+
+if (frase.includes("finalizar compra")) {
+  await finalizarCompra();
+  return;
+}
 
     }; // ✅ FECHA onresult CORRETAMENTE
 
