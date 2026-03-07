@@ -767,11 +767,14 @@ async function finalizarCompra() {
     total += item.quantidade * item.preco;
   });
 
-  const compra = {
-    data: new Date().toISOString(),
-    itens: itens,
-    total: total
-  };
+  const nomeMercado = prompt("Nome do mercado onde está comprando?");
+
+const compra = {
+  data: new Date().toISOString(),
+  mercado: nomeMercado || "Mercado não informado",
+  itens: itens,
+  total: total
+};
 
   const tx = db.transaction(STORE_COMPRAS, "readwrite");
   const store = tx.objectStore(STORE_COMPRAS);
