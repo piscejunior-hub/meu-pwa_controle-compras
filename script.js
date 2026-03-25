@@ -852,30 +852,37 @@ async function retomarUltimaCompra() {
 
   const req = store.getAll();
 
-  req.onsuccess = async () => {
+  return new Promise(resolve => {
 
-    const compras = req.result;
+    req.onsuccess = async () => {
 
-    if (!compras.length) {
-      falar("Nenhuma compra encontrada.");
-      return;
-    }
+      const compras = req.result;
 
-    const ultima = compras[compras.length - 1];
+      if (!compras.length) {
+        falar("Nenhuma compra encontrada.");
+        return resolve(null);
+      }
 
-    if (ultima.status !== "aberta") {
-      falar("A última compra já foi finalizada.");
-      return;
-    }
+      const ultima = compras[compras.length - 1];
 
-    for (const item of ultima.itens) {
-      await addItem(item);
-    }
+      if (ultima.status !== "aberta") {
+        falar("A última compra já foi finalizada.");
+        return resolve(null);
+      }
 
-    await renderList();
+      // 🔥 LIMPA antes de restaurar
+      await limparCarrinho();
 
-    falar("Compra retomada. Você pode adicionar novos produtos.");
-  };
+      for (const item of ultima.itens) {
+        await addItem(item.nome, item.quantidade, item.preco);
+      }
+
+      await renderList();
+
+      resolve(ultima);
+    };
+
+  });
 }
 
 
@@ -994,9 +1001,21 @@ if (frase.includes("esqueci")) {
     return;
   }
 
-  await retomarUltimaCompra();
+  const compra = await retomarUltimaCompra();
+
+  if (!compra) return;
 
   await addItem(produto, 1, 0);
+
+  // 🔥 ATUALIZA TAMBÉM NO HISTÓRICO
+  compra.itens.push({
+    nome: produto,
+    quantidade: 1,
+    preco: 0
+  });
+
+  const tx = db.transaction(STORE_COMPRAS, "readwrite");
+  tx.objectStore(STORE_COMPRAS).put(compra);
 
   await renderList();
 
@@ -1104,87 +1123,65 @@ tx.objectStore(STORE_COMPRAS)
 
 async function mostrarHistorico(){
 
-const container =
-document.getElementById("historicoLista");
+  const container = document.getElementById("historicoLista");
+  if(!container) return;
 
-if(!container) return;
+  const compras = await getComprasHistorico();
 
-const compras =
-await getComprasHistorico();
+  if(compras.length < 2){
+    container.innerHTML = "<p>Precisa de pelo menos 2 compras para comparar.</p>";
+    return;
+  }
 
-if(compras.length === 0){
+  const atual = compras[compras.length - 1];
+  const anterior = compras[compras.length - 2];
 
-container.innerHTML =
-"<p>Nenhuma compra registrada.</p>";
+  let html = `
+    <table border="1" style="width:100%; text-align:center;">
+      <tr>
+        <th>Produto</th>
+        <th>${anterior.mercado || "Mercado A"}</th>
+        <th>${atual.mercado || "Mercado B"}</th>
+        <th>Diferença</th>
+        <th>Melhor preço</th>
+      </tr>
+  `;
 
-return;
+  atual.itens.forEach(itemAtual => {
 
-}
+    const itemAnterior = anterior.itens.find(i =>
+      normalizar(i.nome) === normalizar(itemAtual.nome)
+    );
 
-container.innerHTML="";
+    const precoA = itemAnterior ? itemAnterior.preco : 0;
+    const precoB = itemAtual.preco;
 
-compras.reverse().forEach(c=>{
+    const diff = precoB - precoA;
 
-container.innerHTML +=`
+    let melhor = "-";
 
-<div style="padding:10px;border-bottom:1px solid #444">
+    if (precoA && precoB) {
+      melhor = precoA < precoB
+        ? anterior.mercado || "A"
+        : atual.mercado || "B";
+    }
 
-📅 ${new Date(c.data).toLocaleDateString()}<br>
+    html += `
+      <tr>
+        <td>${itemAtual.nome}</td>
+        <td>R$ ${precoA.toFixed(2)}</td>
+        <td>R$ ${precoB.toFixed(2)}</td>
+        <td style="color:${diff > 0 ? 'red' : 'lime'}">
+          R$ ${diff.toFixed(2)}
+        </td>
+        <td>${melhor}</td>
+      </tr>
+    `;
+  });
 
-💰 Total: R$ ${c.total.toFixed(2)}
+  html += "</table>";
 
-</div>
-
-`;
-
-});
-
-calcularEconomia();
-
-}
-
-
-
-async function calcularEconomia(){
-
-const compras =
-await getComprasHistorico();
-
-const economiaEl =
-document.getElementById("economia");
-
-if(!economiaEl) return;
-
-if(compras.length <2){
-
-economiaEl.innerText =
-"Sem comparação ainda.";
-
-return;
-
-}
-
-compras.sort((a,b)=>
-new Date(b.data)-new Date(a.data));
-
-const atual = compras[0];
-const anterior = compras[1];
-
-const economia =
-anterior.total - atual.total;
-
-if(economia>0){
-
-economiaEl.innerText =
-`Você economizou R$ ${economia.toFixed(2)}`;
-
-}else{
-
-economiaEl.innerText =
-`Gastou R$ ${Math.abs(economia).toFixed(2)} a mais`;
-
-}
-
+  container.innerHTML = html;
 }
 
 
