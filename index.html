@@ -14,16 +14,17 @@
 
 <h1>🛒 Lista de Compras Inteligente</h1>
 
-<!-- MENU -->
+<!-- BOTÃO MENU -->
 <button id="menuBtn" onclick="abrirMenu()">☰</button>
 
+<!-- MENU LATERAL -->
 <div id="menuLateral" class="menu-lateral">
-  <button onclick="fecharMenu()">✖</button>
+  <button class="fechar-menu" onclick="fecharMenu()">✖</button>
 
   <h2>Menu</h2>
 
   <button onclick="mostrarAba('abaProdutos')">
-    📦 Produtos
+    📦 Produtos Cadastrados
   </button>
 
   <button onclick="mostrarAba('abaGuia')">
@@ -31,13 +32,14 @@
   </button>
 </div>
 
-<!-- 🔥 AÇÕES SUPERIORES -->
+<!-- 🔥 BOTÕES SUPERIORES (SEM QUEBRAR NADA) -->
 <div class="botoes-acoes">
   <button onclick="mostrarAba('abaHistorico')" class="btn-historico">
-    📜 Histórico
+    📜 Histórico e Economia
   </button>
 
-  <button id="voiceBtn" class="voice-btn">
+  <!-- 🔥 CORREÇÃO DO MICROFONE -->
+  <button id="voiceBtn" class="voice-btn" onclick="startVoice()">
     🎤 Iniciar
   </button>
 </div>
@@ -46,40 +48,30 @@
 
 <div class="layout">
 
-  <!-- 🔵 ESQUERDA -->
+  <!-- 🔵 COLUNA ESQUERDA -->
   <div class="coluna-esquerda">
 
-    <!-- 💰 FINANCEIRO -->
     <div class="card">
-      <h3>💰 Controle Financeiro</h3>
-
-      <p><strong>Orçamento:</strong></p>
+      <h3>💰 Orçamento</h3>
       <p id="orcamento">R$ 0,00</p>
+    </div>
 
-      <p><strong>Deslocamento:</strong></p>
+    <div class="card">
+      <h3>🚕 Deslocamento</h3>
       <p id="deslocamento">R$ 0,00</p>
     </div>
 
-    <!-- 🧾 CARRINHO -->
     <div class="card">
       <h3>🧾 Carrinho</h3>
       <ul id="lista"></ul>
     </div>
 
-    <!-- 🔥 AÇÕES COMPRA -->
-    <div class="card">
-      <h3>⚙️ Ações</h3>
+    <button onclick="finalizarCompra()" class="btn-finalizar">
+      Finalizar Compra
+    </button>
 
-      <button onclick="finalizarCompra()" class="btn-finalizar">
-        ✅ Finalizar Compra
-      </button>
+    <button onclick="retomarUltimaCompra()">Retomar última compra</button>
 
-      <button onclick="retomarUltimaCompra()">
-        🔄 Retomar Compra
-      </button>
-    </div>
-
-    <!-- 💰 TOTAL -->
     <div class="card">
       <h3>📊 Total</h3>
       <p id="total">R$ 0,00</p>
@@ -87,47 +79,44 @@
 
   </div>
 
-  <!-- 🟣 DIREITA -->
+  <!-- 🟣 COLUNA DIREITA -->
   <div class="coluna-direita">
 
-    <!-- 📊 CONSUMO -->
     <div class="card">
       <h3>📊 Consumo Calculado</h3>
-
       <div id="listaConsumo">
         <p style="color:#aaa;">Nenhum cálculo ainda...</p>
       </div>
     </div>
 
-    <!-- 🛒 REGISTRO -->
     <div class="card">
       <h3>🛒 Registrar Compra</h3>
-
       <div id="formCompra">
-        <p style="color:#aaa;">Selecione um item</p>
+        <p style="color:#aaa;">Selecione um item do consumo</p>
       </div>
     </div>
 
-    <!-- ➕ PRODUTOS -->
+    <!-- CADASTRO PRODUTO -->
     <div class="card">
-      <h3>➕ Cadastro de Produto</h3>
+      <h3>➕ Cadastrar Produto</h3>
 
-      <input id="nomeProduto" type="text" placeholder="Nome do produto">
-      <input id="consumoProduto" type="number" step="0.01" placeholder="Consumo/dia">
+      <label>Nome do Produto</label>
+      <input id="nomeProduto" type="text">
 
+      <label>Consumo por pessoa/dia</label>
+      <input id="consumoProduto" type="number" step="0.01">
+
+      <label>Tipo</label>
       <select id="tipoProduto">
         <option value="kg">Quilo</option>
         <option value="litro">Litro</option>
         <option value="unidade">Unidade</option>
       </select>
 
-      <button onclick="cadastrarProduto()">
-        💾 Salvar
-      </button>
+      <button onclick="cadastrarProduto()">Salvar Produto</button>
 
       <hr>
 
-      <h4>📦 Produtos</h4>
       <div id="listaProdutos"></div>
     </div>
 
@@ -141,8 +130,8 @@
 const voiceBtn = document.getElementById("voiceBtn");
 
 voiceBtn.addEventListener("click", () => {
-  startVoice();
 
+  // alterna texto sem quebrar o reconhecimento
   if (!voiceBtn.classList.contains("stop")) {
     voiceBtn.classList.add("stop");
     voiceBtn.textContent = "🛑 Parar";
@@ -150,15 +139,12 @@ voiceBtn.addEventListener("click", () => {
     voiceBtn.classList.remove("stop");
     voiceBtn.textContent = "🎤 Iniciar";
   }
-});
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
+});
 </script>
 
 <!-- HISTÓRICO -->
-<div id="abaHistorico" class="aba-lateral">
+<div id="abaHistorico" class="aba-lateral" style="display:none;">
   <h2>📜 Histórico</h2>
   <div id="historicoLista"></div>
 
@@ -168,15 +154,13 @@ if ("serviceWorker" in navigator) {
 
 <!-- GUIA -->
 <div id="abaGuia" class="aba-lateral">
-  <h2>Guia de Consumo</h2>
+  <h2>Guia de Consumo Diário</h2>
 
   <div class="guia-item"><strong>Arroz</strong> – 0.10 quilo</div>
   <div class="guia-item"><strong>Feijão</strong> – 0.08 quilo</div>
   <div class="guia-item"><strong>Macarrão</strong> – 0.10 quilo</div>
-  <div class="guia-item"><strong>Carne</strong> – 0.07 quilo</div>
   <div class="guia-item"><strong>Frango</strong> – 0.10 quilo</div>
   <div class="guia-item"><strong>Leite</strong> – 0.25 litro</div>
-  <div class="guia-item"><strong>Ovo</strong> – 1 unidade</div>
 </div>
 
 </body>
