@@ -12,20 +12,18 @@
 
 <body>
 
-
 <h1>🛒 Lista de Compras Inteligente</h1>
 
-<!-- BOTÃO MENU -->
+<!-- MENU -->
 <button id="menuBtn" onclick="abrirMenu()">☰</button>
 
-<!-- MENU LATERAL -->
 <div id="menuLateral" class="menu-lateral">
-  <button class="fechar-menu" onclick="fecharMenu()">✖</button>
+  <button onclick="fecharMenu()">✖</button>
 
   <h2>Menu</h2>
 
   <button onclick="mostrarAba('abaProdutos')">
-    📦 Produtos Cadastrados
+    📦 Produtos
   </button>
 
   <button onclick="mostrarAba('abaGuia')">
@@ -33,42 +31,55 @@
   </button>
 </div>
 
-<button onclick="mostrarAba('abaHistorico')">
-📜 Histórico e Economia
-</button>
+<!-- 🔥 AÇÕES SUPERIORES -->
+<div class="botoes-acoes">
+  <button onclick="mostrarAba('abaHistorico')" class="btn-historico">
+    📜 Histórico
+  </button>
 
+  <button id="voiceBtn" class="voice-btn">
+    🎤 Iniciar
+  </button>
+</div>
 
-<button id="voiceBtn" class="voice-btn">🎤 Iniciar</button>
 <div id="status" class="status">Pronto para ouvir...</div>
 
 <div class="layout">
 
-  <!-- 🔵 COLUNA ESQUERDA -->
+  <!-- 🔵 ESQUERDA -->
   <div class="coluna-esquerda">
 
+    <!-- 💰 FINANCEIRO -->
     <div class="card">
-      <h3>💰 Orçamento</h3>
-      <p id="orcamento">R$ 0,00</p>
-    </div>
+      <h3>💰 Controle Financeiro</h3>
 
-    <div class="card">
-      <h3>🚕 Deslocamento</h3>
+      <p><strong>Orçamento:</strong></p>
+      <p id="orcamento">R$ 0,00</p>
+
+      <p><strong>Deslocamento:</strong></p>
       <p id="deslocamento">R$ 0,00</p>
     </div>
 
+    <!-- 🧾 CARRINHO -->
     <div class="card">
       <h3>🧾 Carrinho</h3>
       <ul id="lista"></ul>
     </div>
 
+    <!-- 🔥 AÇÕES COMPRA -->
+    <div class="card">
+      <h3>⚙️ Ações</h3>
 
-<button onclick="finalizarCompra()" class="btn-finalizar">
-  Finalizar Compra
-</button>
+      <button onclick="finalizarCompra()" class="btn-finalizar">
+        ✅ Finalizar Compra
+      </button>
 
-<button onclick="retomarUltimaCompra()">Retomar última compra</button>
+      <button onclick="retomarUltimaCompra()">
+        🔄 Retomar Compra
+      </button>
+    </div>
 
-
+    <!-- 💰 TOTAL -->
     <div class="card">
       <h3>📊 Total</h3>
       <p id="total">R$ 0,00</p>
@@ -76,51 +87,48 @@
 
   </div>
 
-  <!-- 🟣 COLUNA DIREITA -->
+  <!-- 🟣 DIREITA -->
   <div class="coluna-direita">
 
+    <!-- 📊 CONSUMO -->
     <div class="card">
       <h3>📊 Consumo Calculado</h3>
+
       <div id="listaConsumo">
         <p style="color:#aaa;">Nenhum cálculo ainda...</p>
       </div>
     </div>
 
+    <!-- 🛒 REGISTRO -->
     <div class="card">
       <h3>🛒 Registrar Compra</h3>
+
       <div id="formCompra">
-        <p style="color:#aaa;">Selecione um item do consumo</p>
+        <p style="color:#aaa;">Selecione um item</p>
       </div>
     </div>
 
-    <!-- 🔥 NOVO CARD CADASTRO DE PRODUTOS -->
+    <!-- ➕ PRODUTOS -->
     <div class="card">
-      <h3>➕ Cadastrar Produto</h3>
+      <h3>➕ Cadastro de Produto</h3>
 
-      <label>Nome do Produto</label>
-      <input id="nomeProduto" type="text" placeholder="Ex: arroz">
+      <input id="nomeProduto" type="text" placeholder="Nome do produto">
+      <input id="consumoProduto" type="number" step="0.01" placeholder="Consumo/dia">
 
-      <label>Consumo por pessoa/dia</label>
-      <input id="consumoProduto" type="number" step="0.01" placeholder="Ex: 0.08">
-
-      <label>Tipo de Medida</label>
       <select id="tipoProduto">
-        <option value="kg">Quilo (kg)</option>
-        <option value="litro">Litro (L)</option>
+        <option value="kg">Quilo</option>
+        <option value="litro">Litro</option>
         <option value="unidade">Unidade</option>
       </select>
 
       <button onclick="cadastrarProduto()">
-        💾 Salvar Produto
+        💾 Salvar
       </button>
 
-      <hr style="margin:15px 0;">
+      <hr>
 
-      <h4>📦 Produtos Cadastrados</h4>
-      <div id="listaProdutos">
-        <p style="color:#aaa;">Nenhum produto cadastrado...</p>
-      </div>
-
+      <h4>📦 Produtos</h4>
+      <div id="listaProdutos"></div>
     </div>
 
   </div>
@@ -130,135 +138,46 @@
 <script src="script.js"></script>
 
 <script>
+const voiceBtn = document.getElementById("voiceBtn");
 
-  const voiceBtn = document.getElementById("voiceBtn");
+voiceBtn.addEventListener("click", () => {
+  startVoice();
 
-  voiceBtn.addEventListener("click", () => {
-    startVoice();
-
-    if (!voiceBtn.classList.contains("stop")) {
-      voiceBtn.classList.add("stop");
-      voiceBtn.textContent = "🛑 Parar";
-    } else {
-      voiceBtn.classList.remove("stop");
-      voiceBtn.textContent = "🎤 Iniciar";
-    }
-  });
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js")
-      .then(() => console.log("Service Worker registrado"))
-      .catch(err => console.error("Erro SW:", err));
+  if (!voiceBtn.classList.contains("stop")) {
+    voiceBtn.classList.add("stop");
+    voiceBtn.textContent = "🛑 Parar";
+  } else {
+    voiceBtn.classList.remove("stop");
+    voiceBtn.textContent = "🎤 Iniciar";
   }
+});
 
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
 </script>
 
-<!-- ABA GUIA DE CONSUMO COMPLETA -->
-<div id="abaHistorico" class="aba-lateral" style="display:none;">
+<!-- HISTÓRICO -->
+<div id="abaHistorico" class="aba-lateral">
+  <h2>📜 Histórico</h2>
+  <div id="historicoLista"></div>
 
-<h2>📜 Histórico</h2>
-
-<div id="historicoLista"></div>
-
-<h3>💰 Economia</h3>
-
-<p id="economia">---</p>
-
+  <h3>💰 Economia</h3>
+  <p id="economia">---</p>
 </div>
 
+<!-- GUIA -->
 <div id="abaGuia" class="aba-lateral">
-  <h2>Guia de Consumo Diário (por pessoa)</h2>
+  <h2>Guia de Consumo</h2>
 
-  <!-- GRÃOS E CEREAIS -->
   <div class="guia-item"><strong>Arroz</strong> – 0.10 quilo</div>
   <div class="guia-item"><strong>Feijão</strong> – 0.08 quilo</div>
   <div class="guia-item"><strong>Macarrão</strong> – 0.10 quilo</div>
-  <div class="guia-item"><strong>Lentilha</strong> – 0.07 quilo</div>
-  <div class="guia-item"><strong>Grão-de-bico</strong> – 0.07 quilo</div>
-  <div class="guia-item"><strong>Farinha de trigo</strong> – 0.05 quilo</div>
-  <div class="guia-item"><strong>Farinha de mandioca</strong> – 0.04 quilo</div>
-  <div class="guia-item"><strong>Aveia</strong> – 0.04 quilo</div>
-  <div class="guia-item"><strong>Pão</strong> – 0.15 quilo</div>
-  <div class="guia-item"><strong>Milho</strong> – 0.08 quilo</div>
-
-  <!-- CARNES E PROTEÍNAS -->
-  <div class="guia-item"><strong>Carne bovina</strong> – 0.07 quilo</div>
+  <div class="guia-item"><strong>Carne</strong> – 0.07 quilo</div>
   <div class="guia-item"><strong>Frango</strong> – 0.10 quilo</div>
-  <div class="guia-item"><strong>Peixe</strong> – 0.08 quilo</div>
-  <div class="guia-item"><strong>Carne suína</strong> – 0.07 quilo</div>
-  <div class="guia-item"><strong>Ovo</strong> – 1 unidade</div>
-  <div class="guia-item"><strong>Tofu</strong> – 0.08 quilo</div>
-  <div class="guia-item"><strong>Proteína de soja</strong> – 0.05 quilo</div>
-
-  <!-- LATICÍNIOS -->
   <div class="guia-item"><strong>Leite</strong> – 0.25 litro</div>
-  <div class="guia-item"><strong>Iogurte</strong> – 0.17 litro</div>
-  <div class="guia-item"><strong>Queijo</strong> – 0.03 quilo</div>
-  <div class="guia-item"><strong>Manteiga</strong> – 0.01 quilo</div>
-
-  <!-- VERDURAS -->
-  <div class="guia-item"><strong>Alface</strong> – 0.03 quilo</div>
-  <div class="guia-item"><strong>Couve</strong> – 0.04 quilo</div>
-  <div class="guia-item"><strong>Repolho</strong> – 0.05 quilo</div>
-  <div class="guia-item"><strong>Espinafre</strong> – 0.04 quilo</div>
-  <div class="guia-item"><strong>Brócolis</strong> – 0.05 quilo</div>
-  <div class="guia-item"><strong>Cenoura</strong> – 0.06 quilo</div>
-  <div class="guia-item"><strong>Beterraba</strong> – 0.05 quilo</div>
-  <div class="guia-item"><strong>Tomate</strong> – 0.10 quilo</div>
-  <div class="guia-item"><strong>Cebola</strong> – 0.05 quilo</div>
-  <div class="guia-item"><strong>Pimentão</strong> – 0.04 quilo</div>
-
-  <!-- LEGUMES -->
-  <div class="guia-item"><strong>Abobrinha</strong> – 0.07 quilo</div>
-  <div class="guia-item"><strong>Berinjela</strong> – 0.06 quilo</div>
-  <div class="guia-item"><strong>Chuchu</strong> – 0.07 quilo</div>
-  <div class="guia-item"><strong>Batata</strong> – 0.15 quilo</div>
-  <div class="guia-item"><strong>Batata-doce</strong> – 0.12 quilo</div>
-  <div class="guia-item"><strong>Mandioca</strong> – 0.12 quilo</div>
-
-  <!-- FRUTAS -->
-  <div class="guia-item"><strong>Banana</strong> – 0.12 quilo</div>
-  <div class="guia-item"><strong>Maçã</strong> – 0.12 quilo</div>
-  <div class="guia-item"><strong>Laranja</strong> – 0.15 quilo</div>
-  <div class="guia-item"><strong>Melancia</strong> – 0.20 quilo</div>
-  <div class="guia-item"><strong>Abacaxi</strong> – 0.15 quilo</div>
-  <div class="guia-item"><strong>Mamão</strong> – 0.15 quilo</div>
-  <div class="guia-item"><strong>Uva</strong> – 0.10 quilo</div>
-  <div class="guia-item"><strong>Melão</strong> – 0.18 quilo</div>
-  <div class="guia-item"><strong>Manga</strong> – 0.15 quilo</div>
-  <div class="guia-item"><strong>Limão</strong> – 0.03 quilo</div>
-
-  <!-- INDUSTRIALIZADOS BÁSICOS -->
-  <div class="guia-item"><strong>Açúcar</strong> – 0.03 quilo</div>
-  <div class="guia-item"><strong>Sal</strong> – 0.005 quilo</div>
-  <div class="guia-item"><strong>Óleo de cozinha</strong> – 0.03 litro</div>
-  <div class="guia-item"><strong>Café</strong> – 0.01 quilo</div>
-  <div class="guia-item"><strong>Achocolatado</strong> – 0.02 quilo</div>
-  <div class="guia-item"><strong>Molho de tomate</strong> – 0.05 litro</div>
-  <div class="guia-item"><strong>Maionese</strong> – 0.02 quilo</div>
-  <div class="guia-item"><strong>Mostarda</strong> – 0.01 quilo</div>
-  <div class="guia-item"><strong>Ketchup</strong> – 0.02 quilo</div>
-
-  <!-- BEBIDAS -->
-  <div class="guia-item"><strong>Água</strong> – 2 litro</div>
-  <div class="guia-item"><strong>Suco natural</strong> – 0.25 litro</div>
-  <div class="guia-item"><strong>Refrigerante</strong> – 0.20 litro</div>
-
-</div>
-
-<div id="confirmacaoGuia" style="display:none;" class="card">
-  <h3>Confirmar Cadastro</h3>
-  <p id="textoConfirmacaoGuia"></p>
-  <button id="btnConfirmarGuia">✅ Confirmar</button>
-  <button id="btnCancelarGuia">❌ Cancelar</button>
+  <div class="guia-item"><strong>Ovo</strong> – 1 unidade</div>
 </div>
 
 </body>
 </html>
-
-
-
-
-
-
-
